@@ -218,6 +218,7 @@ import Testing
     #expect(marquee.renderedText.contains("DeepSeek ¥5.47"))
     #expect(marquee.renderedText.components(separatedBy: summary).count - 1 == 2)
     #expect(marquee.textContentWidth >= marquee.singleCycleWidth * 2 - 1)
+    #expect(marquee.renderedTextColor?.whiteComponent ?? 0 > 0.9)
     #expect(marquee.cycleDuration >= 6)
     #expect(marquee.cycleDuration <= 12)
     marquee.stop()

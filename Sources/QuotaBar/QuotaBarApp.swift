@@ -48,6 +48,10 @@ final class MenuBarMarqueeView: NSView {
         textLayer.alignmentMode = .left
         textLayer.truncationMode = .none
         textLayer.isWrapped = false
+        textLayer.shadowColor = NSColor.black.cgColor
+        textLayer.shadowOpacity = 0.55
+        textLayer.shadowRadius = 1
+        textLayer.shadowOffset = .zero
         textClipView.layer?.addSublayer(textLayer)
     }
 
@@ -86,7 +90,7 @@ final class MenuBarMarqueeView: NSView {
         let repeatedText = cycle + cycle
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
-            .foregroundColor: NSColor.labelColor
+            .foregroundColor: NSColor.white.withAlphaComponent(0.96)
         ]
         textLayer.contentsScale = window?.backingScaleFactor
             ?? NSScreen.main?.backingScaleFactor
@@ -134,6 +138,20 @@ final class MenuBarMarqueeView: NSView {
 
     var renderedText: String {
         (textLayer.string as? NSAttributedString)?.string ?? ""
+    }
+
+    var renderedTextColor: NSColor? {
+        guard
+            let attributed = textLayer.string as? NSAttributedString,
+            attributed.length > 0
+        else {
+            return nil
+        }
+        return attributed.attribute(
+            .foregroundColor,
+            at: 0,
+            effectiveRange: nil
+        ) as? NSColor
     }
 }
 
