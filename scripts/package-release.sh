@@ -99,6 +99,11 @@ attach_output="$(/usr/bin/hdiutil attach "$rw_dmg" \
 mounted_device="$(print -r -- "$attach_output" | awk '$1 ~ /^\/dev\// {print $1; exit}')"
 
 chflags hidden "$mount_dir/.background" || true
+/usr/bin/SetFile -a V "$mount_dir/.background" || true
+if [[ -d "$mount_dir/.fseventsd" ]]; then
+    chflags hidden "$mount_dir/.fseventsd" || true
+    /usr/bin/SetFile -a V "$mount_dir/.fseventsd" || true
+fi
 /usr/bin/osascript <<APPLESCRIPT || \
     echo "Warning: Finder layout could not be applied; drag-to-Applications remains available." >&2
 tell application "Finder"
@@ -118,6 +123,15 @@ tell application "Finder"
     set background picture of theViewOptions to backgroundFile
     set position of item "$app_name" of dmgFolder to {230, 205}
     set position of item "Applications" of dmgFolder to {690, 205}
+    try
+        set position of item ".background" of dmgFolder to {1600, 1600}
+    end try
+    try
+        set position of item ".fseventsd" of dmgFolder to {1700, 1600}
+    end try
+    try
+        set position of item ".Trashes" of dmgFolder to {1800, 1600}
+    end try
     update dmgFolder without registering applications
     delay 2
     close dmgWindow
@@ -125,6 +139,7 @@ end tell
 APPLESCRIPT
 
 sync
+rm -rf "$mount_dir/.fseventsd" "$mount_dir/.Trashes"
 /usr/bin/hdiutil detach "$mounted_device" -quiet
 mounted_device=""
 /usr/bin/hdiutil convert "$rw_dmg" \

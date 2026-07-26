@@ -191,7 +191,7 @@ actor CodexUsageClient {
                     "clientInfo": [
                         "name": "quota-bar",
                         "title": "Quota Bar",
-                        "version": "1.2.0"
+                        "version": "1.2.1"
                     ],
                     "capabilities": ["experimentalApi": true]
                 ]

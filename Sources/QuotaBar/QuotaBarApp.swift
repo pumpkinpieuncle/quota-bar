@@ -1,4 +1,5 @@
 import AppKit
+import Carbon
 import Combine
 import SwiftUI
 
@@ -43,16 +44,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var panelLayoutObservation: AnyCancellable?
     private var providerOrderObservation: AnyCancellable?
     private var hiddenProvidersObservation: AnyCancellable?
+    private var compactSummaryTimer: Timer?
+    private var compactSummaryIndex = 0
+    private var hotKeyRef: EventHotKeyRef?
+    private var hotKeyHandlerRef: EventHandlerRef?
+    private var showPanelObserver: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         makePanel()
         makeStatusItem()
+        registerShowPanelHotKey()
         model.start()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        compactSummaryTimer?.invalidate()
+        if let showPanelObserver {
+            NotificationCenter.default.removeObserver(showPanelObserver)
+        }
+        if let hotKeyRef {
+            UnregisterEventHotKey(hotKeyRef)
+        }
+        if let hotKeyHandlerRef {
+            RemoveEventHandler(hotKeyHandlerRef)
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
+    }
+
+    func applicationShouldHandleReopen(
+        _ sender: NSApplication,
+        hasVisibleWindows flag: Bool
+    ) -> Bool {
+        showPanel()
+        return true
     }
 
     private func makePanel() {
@@ -117,6 +145,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func makeStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        statusItem = item
         if let button = item.button {
             button.image = NSImage(
                 systemSymbolName: "gauge.with.dots.needle.67percent",
@@ -134,9 +163,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let toggle = NSMenuItem(
             title: "",
             action: #selector(togglePanel),
-            keyEquivalent: ""
+            keyEquivalent: "q"
         )
         toggle.target = self
+        toggle.keyEquivalentModifierMask = [.command, .option]
         menu.addItem(toggle)
         menu.addItem(.separator())
 
@@ -191,8 +221,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         refreshMenuItem = refresh
         quitMenuItem = quit
         updateMenuTitles()
-        statusItem = item
         updateStatusItem(snapshots: model.snapshots)
+        compactSummaryTimer = Timer.scheduledTimer(
+            withTimeInterval: 5,
+            repeats: true
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.compactSummaryIndex += 1
+                self.updateStatusItem(snapshots: self.model.snapshots)
+            }
+        }
         snapshotObservation = model.$snapshots
             .receive(on: RunLoop.main)
             .sink { [weak self] snapshots in
@@ -248,17 +287,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func updateStatusItem(snapshots: [ProviderSnapshot]) {
-        let summary = MenuBarSummary.text(
+        let providers = model.preferences.visibleProviderOrder
+        let fullSummary = MenuBarSummary.text(
             snapshots: snapshots,
             preference: model.preferences.quotaWindow,
-            providers: model.preferences.visibleProviderOrder
+            providers: providers
         )
+        let font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .semibold)
+        let fullWidth = (fullSummary as NSString).size(
+            withAttributes: [.font: font]
+        ).width
+        let screenWidth = statusItem?.button?.window?.screen?.visibleFrame.width
+            ?? NSScreen.main?.visibleFrame.width
+            ?? 1_440
+        let useCompactSummary = MenuBarSummary.shouldUseCompactDisplay(
+            screenWidth: screenWidth,
+            fullSummaryWidth: fullWidth
+        )
+        let summary: String
+        if useCompactSummary, !providers.isEmpty {
+            let provider = providers[compactSummaryIndex % providers.count]
+            summary = MenuBarSummary.text(
+                snapshots: snapshots,
+                preference: model.preferences.quotaWindow,
+                providers: [provider]
+            )
+        } else {
+            summary = fullSummary
+        }
         statusItem?.button?.title = summary
         statusItem?.button?.toolTip = MenuBarSummary.accessibilityText(
             snapshots: snapshots,
             language: model.language,
             preference: model.preferences.quotaWindow,
-            providers: model.preferences.visibleProviderOrder
+            providers: providers
         )
         updateQuotaMenuItems(snapshots: snapshots)
     }
@@ -296,8 +358,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if panel.isVisible {
             collapsePanel()
         } else {
-            panel.orderFrontRegardless()
-            updateMenuTitles()
+            showPanel()
         }
     }
 
@@ -317,6 +378,70 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func collapsePanel() {
         panel?.orderOut(nil)
         updateMenuTitles()
+    }
+
+    @objc private func showPanel() {
+        panel?.orderFrontRegardless()
+        updateMenuTitles()
+    }
+
+    private func registerShowPanelHotKey() {
+        showPanelObserver = NotificationCenter.default.addObserver(
+            forName: .quotaBarShowPanel,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.showPanel()
+            }
+        }
+
+        var eventType = EventTypeSpec(
+            eventClass: OSType(kEventClassKeyboard),
+            eventKind: OSType(kEventHotKeyPressed)
+        )
+        let handler: EventHandlerUPP = { _, event, _ in
+            guard let event else { return noErr }
+            var hotKeyID = EventHotKeyID()
+            let status = GetEventParameter(
+                event,
+                EventParamName(kEventParamDirectObject),
+                EventParamType(typeEventHotKeyID),
+                nil,
+                MemoryLayout<EventHotKeyID>.size,
+                nil,
+                &hotKeyID
+            )
+            guard status == noErr, hotKeyID.id == 1 else { return status }
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .quotaBarShowPanel, object: nil)
+            }
+            return noErr
+        }
+        InstallEventHandler(
+            GetApplicationEventTarget(),
+            handler,
+            1,
+            &eventType,
+            nil,
+            &hotKeyHandlerRef
+        )
+        let hotKeyID = EventHotKeyID(
+            signature: fourCharacterCode("QBAR"),
+            id: 1
+        )
+        RegisterEventHotKey(
+            UInt32(kVK_ANSI_Q),
+            UInt32(cmdKey | optionKey),
+            hotKeyID,
+            GetApplicationEventTarget(),
+            0,
+            &hotKeyRef
+        )
+    }
+
+    private func fourCharacterCode(_ value: String) -> OSType {
+        value.utf8.reduce(0) { ($0 << 8) + OSType($1) }
     }
 
     private func resizePanel(for mode: PanelLayoutMode) {
@@ -360,6 +485,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 }
 
 enum MenuBarSummary {
+    static func shouldUseCompactDisplay(
+        screenWidth: CGFloat,
+        fullSummaryWidth: CGFloat
+    ) -> Bool {
+        fullSummaryWidth > max(160, screenWidth * 0.14)
+    }
+
     static func text(
         snapshots: [ProviderSnapshot],
         preference: QuotaWindowPreference,
@@ -416,6 +548,10 @@ enum MenuBarSummary {
         }
         return snapshot.balances.first?.compactText
     }
+}
+
+private extension Notification.Name {
+    static let quotaBarShowPanel = Notification.Name("QuotaBarShowPanel")
 }
 
 @main

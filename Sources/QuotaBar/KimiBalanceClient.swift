@@ -140,7 +140,7 @@ actor KimiBalanceClient {
         request.timeoutInterval = 10
         request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("QuotaBar/1.2.0 macOS", forHTTPHeaderField: "User-Agent")
+        request.setValue("QuotaBar/1.2.1 macOS", forHTTPHeaderField: "User-Agent")
 
         let (data, response) = try await URLSession.shared.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0

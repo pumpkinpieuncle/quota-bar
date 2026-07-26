@@ -136,8 +136,8 @@ struct ContentView: View {
             }
             .buttonStyle(HeaderButtonStyle())
             .help(preferences.language.text(
-                "收成单行",
-                "Collapse to one line"
+                "收成单行；隐藏到顶部栏后可按 ⌥⌘Q 恢复",
+                "Collapse to one line; press ⌥⌘Q if the menu bar is hidden"
             ))
 
             Button {
@@ -716,8 +716,8 @@ private struct SettingsOverlay: View {
                 Image(systemName: "leaf.fill")
                     .foregroundStyle(Color(red: 0.43, green: 0.92, blue: 0.66))
                 Text(language.text(
-                    "状态只来自本地进程、会话事件和 command hook，不调用模型。",
-                    "Status comes only from local processes, session events, and command hooks—never a model."
+                    "状态只来自本地，不调用模型 · 顶部栏被遮挡时按 ⌥⌘Q",
+                    "Local status never calls a model · Press ⌥⌘Q if the menu bar is hidden"
                 ))
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(.white.opacity(0.5))

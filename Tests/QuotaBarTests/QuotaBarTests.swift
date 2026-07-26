@@ -168,6 +168,21 @@ import Testing
     )
 }
 
+@Test func menuBarUsesCompactSummaryWhenSpaceIsLimited() {
+    #expect(
+        MenuBarSummary.shouldUseCompactDisplay(
+            screenWidth: 1_440,
+            fullSummaryWidth: 240
+        )
+    )
+    #expect(
+        !MenuBarSummary.shouldUseCompactDisplay(
+            screenWidth: 2_560,
+            fullSummaryWidth: 240
+        )
+    )
+}
+
 @Test func readsDeepSeekBalance() throws {
     let payload = """
     {
