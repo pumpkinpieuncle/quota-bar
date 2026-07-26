@@ -4,6 +4,8 @@
 
 A lightweight native macOS floating panel for Codex, Claude Code, Kimi Code quotas and work status, plus DeepSeek account balance.
 
+<img width="843" height="293" alt="image" src="https://github.com/user-attachments/assets/11484a74-5f22-4ed2-bb9c-87a9de099feb" />
+
 ## 功能 / Features
 
 - 同屏展示各个服务的额度窗口、余额和重置时间；Kimi 可额外显示开放平台赠送与现金余额。
