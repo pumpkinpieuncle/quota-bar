@@ -30,12 +30,9 @@ enum ClaudeCollectorInstaller {
             settings = parsed
         }
 
-        var hasQuotaBarStatusLine = false
         if let existing = settings["statusLine"] as? [String: Any] {
             let command = existing["command"] as? String ?? ""
-            if command.contains("QuotaBarCapture") {
-                hasQuotaBarStatusLine = true
-            } else {
+            if !command.contains("QuotaBarCapture") {
                 throw CollectorError.existingClaudeStatusLine
             }
         }
@@ -48,14 +45,13 @@ enum ClaudeCollectorInstaller {
         }
 
         let quotedPath = "'" + helper.path.replacingOccurrences(of: "'", with: "'\\''") + "'"
-        if !hasQuotaBarStatusLine {
-            settings["statusLine"] = [
-                "type": "command",
-                "command": quotedPath,
-                "padding": 0,
-                "refreshInterval": 30
-            ]
-        }
+        // Claude already refreshes status lines after relevant session events.
+        // Leaving refreshInterval unset avoids a redundant background timer.
+        settings["statusLine"] = [
+            "type": "command",
+            "command": quotedPath,
+            "padding": 0
+        ]
 
         var hooks = settings["hooks"] as? [String: Any] ?? [:]
         let hookCommand = "\(quotedPath) --hook"

@@ -29,6 +29,12 @@ final class AppModel: ObservableObject {
     }
 
     func start() {
+        if
+            LocalCollectors.claudeCollectorInstalled(),
+            LocalCollectors.claudeCollectorNeedsRepair()
+        {
+            try? ClaudeCollectorInstaller.install()
+        }
         Task { await refresh(forceRemote: true) }
     }
 
@@ -89,8 +95,8 @@ final class AppModel: ObservableObject {
         do {
             try ClaudeCollectorInstaller.install()
             notice = language.text(
-                "Claude 零额度采集器已启用；重启 Claude Code，首次响应后会显示额度和审批状态。",
-                "Claude zero-token capture is enabled. Restart Claude Code; quota and approval state appear after its first response."
+                "Claude 零额度采集器已配置；重启 Claude Code，首次正常响应后会显示额度、重置时间和审批状态。",
+                "Claude zero-token capture is configured. Restart Claude Code; quota, reset times, and approval state appear after its first normal response."
             )
             Task { await refresh(forceRemote: false) }
         } catch {
@@ -106,7 +112,8 @@ final class AppModel: ObservableObject {
         scheduledRefresh?.cancel()
         let hasActiveProvider = snapshots.contains { $0.activity.isActive }
         guard let interval = preferences.refreshMode.interval(
-            hasActiveProvider: hasActiveProvider
+            hasActiveProvider: hasActiveProvider,
+            customSeconds: preferences.customRefreshSeconds
         ) else {
             return
         }

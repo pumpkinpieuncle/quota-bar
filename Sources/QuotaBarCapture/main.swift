@@ -62,15 +62,34 @@ if CommandLine.arguments.contains("--hook") {
     exit(0)
 }
 
+let statusURL = outputDirectory.appending(path: "claude-status.json")
 var filtered: [String: Any] = [
     "captured_at": Date().timeIntervalSince1970
 ]
-for key in ["cwd", "session_id", "model", "rate_limits", "context_window"] {
+for key in ["cwd", "session_id", "version", "model", "context_window"] {
     if let value = object[key] {
         filtered[key] = value
     }
 }
-writePrivateJSON(filtered, to: outputDirectory.appending(path: "claude-status.json"))
+if
+    let rateLimits = object["rate_limits"] as? [String: Any],
+    !rateLimits.isEmpty
+{
+    filtered["rate_limits"] = rateLimits
+    filtered["rate_limits_captured_at"] = Date().timeIntervalSince1970
+} else if
+    let existingData = try? Data(contentsOf: statusURL),
+    let existing = try? JSONSerialization.jsonObject(with: existingData) as? [String: Any],
+    let rateLimits = existing["rate_limits"] as? [String: Any]
+{
+    // A fresh Claude session omits rate_limits until its first response.
+    // Preserve the last official snapshot instead of blanking the card.
+    filtered["rate_limits"] = rateLimits
+    filtered["rate_limits_captured_at"] = existing["rate_limits_captured_at"]
+        ?? existing["captured_at"]
+        ?? Date().timeIntervalSince1970
+}
+writePrivateJSON(filtered, to: statusURL)
 
 let modelObject = object["model"] as? [String: Any]
 let model = (modelObject?["display_name"] as? String)

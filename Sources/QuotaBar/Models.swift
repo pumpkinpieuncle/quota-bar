@@ -135,6 +135,7 @@ enum RefreshMode: String, CaseIterable, Identifiable, Sendable {
     case thirtySeconds
     case oneMinute
     case fiveMinutes
+    case custom
     case manual
 
     var id: String { rawValue }
@@ -149,17 +150,23 @@ enum RefreshMode: String, CaseIterable, Identifiable, Sendable {
             language.text("每 1 分钟", "Every minute")
         case .fiveMinutes:
             language.text("每 5 分钟", "Every 5 minutes")
+        case .custom:
+            language.text("自定义", "Custom")
         case .manual:
             language.text("仅手动", "Manual only")
         }
     }
 
-    func interval(hasActiveProvider: Bool) -> TimeInterval? {
+    func interval(
+        hasActiveProvider: Bool,
+        customSeconds: Int = 120
+    ) -> TimeInterval? {
         switch self {
         case .smart: hasActiveProvider ? 30 : 300
         case .thirtySeconds: 30
         case .oneMinute: 60
         case .fiveMinutes: 300
+        case .custom: TimeInterval(min(max(customSeconds, 10), 3_600))
         case .manual: nil
         }
     }

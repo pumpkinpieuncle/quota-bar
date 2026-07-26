@@ -28,4 +28,12 @@ import Testing
     #expect(RefreshMode.smart.interval(hasActiveProvider: false) == 300)
     #expect(RefreshMode.oneMinute.interval(hasActiveProvider: false) == 60)
     #expect(RefreshMode.manual.interval(hasActiveProvider: true) == nil)
+    #expect(RefreshMode.custom.interval(
+        hasActiveProvider: false,
+        customSeconds: 95
+    ) == 95)
+    #expect(RefreshMode.custom.interval(
+        hasActiveProvider: false,
+        customSeconds: 1
+    ) == 10)
 }

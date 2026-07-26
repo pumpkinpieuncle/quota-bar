@@ -256,7 +256,10 @@ private struct ProviderCard: View {
 
                     if snapshot.id == .claude && snapshot.setupAvailable {
                         Button(
-                            language.text("启用零额度采集", "Enable zero-token capture"),
+                            language.text(
+                                "配置 / 修复采集",
+                                "Configure / repair capture"
+                            ),
                             action: installClaudeCollector
                         )
                             .buttonStyle(CollectorButtonStyle(tint: accent))
@@ -395,20 +398,34 @@ private struct SettingsOverlay: View {
 
             settingRow(
                 title: language.text("刷新频率", "Refresh interval"),
-                detail: language.text(
-                    "智能模式在全部空闲时仅每 5 分钟读取一次",
-                    "Smart mode checks only every 5 minutes while idle"
-                )
+                detail: refreshDetail
             ) {
-                Picker("", selection: $preferences.refreshMode) {
-                    ForEach(RefreshMode.allCases) { mode in
-                        Text(mode.label(language: language)).tag(mode)
+                HStack(spacing: 7) {
+                    Picker("", selection: $preferences.refreshMode) {
+                        ForEach(RefreshMode.allCases) { mode in
+                            Text(mode.label(language: language)).tag(mode)
+                        }
                     }
-                }
-                .labelsHidden()
-                .frame(width: 245)
-                .onChange(of: preferences.refreshMode) { _, _ in
-                    model.preferencesChanged(languageChanged: false)
+                    .labelsHidden()
+                    .frame(width: preferences.refreshMode == .custom ? 105 : 245)
+                    .onChange(of: preferences.refreshMode) { _, _ in
+                        model.preferencesChanged(languageChanged: false)
+                    }
+
+                    if preferences.refreshMode == .custom {
+                        TextField(
+                            "",
+                            value: customSecondsBinding,
+                            format: .number
+                        )
+                        .multilineTextAlignment(.trailing)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 58)
+
+                        Text(language.text("秒", "sec"))
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.55))
+                    }
                 }
             }
 
@@ -435,6 +452,29 @@ private struct SettingsOverlay: View {
                 }
         )
         .shadow(color: .black.opacity(0.42), radius: 20, y: 8)
+    }
+
+    private var customSecondsBinding: Binding<Int> {
+        Binding(
+            get: { preferences.customRefreshSeconds },
+            set: { newValue in
+                preferences.customRefreshSeconds = min(max(newValue, 10), 3_600)
+                model.preferencesChanged(languageChanged: false)
+            }
+        )
+    }
+
+    private var refreshDetail: String {
+        if preferences.refreshMode == .custom {
+            return language.text(
+                "可输入 10–3600 秒",
+                "Enter any value from 10–3600 seconds"
+            )
+        }
+        return language.text(
+            "智能模式在全部空闲时仅每 5 分钟读取一次",
+            "Smart mode checks only every 5 minutes while idle"
+        )
     }
 
     private func settingRow<Content: View>(

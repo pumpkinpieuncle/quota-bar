@@ -11,11 +11,18 @@ final class AppPreferences: ObservableObject {
         didSet { defaults.set(refreshMode.rawValue, forKey: Keys.refreshMode) }
     }
 
+    @Published var customRefreshSeconds: Int {
+        didSet {
+            defaults.set(customRefreshSeconds, forKey: Keys.customRefreshSeconds)
+        }
+    }
+
     private let defaults: UserDefaults
 
     private enum Keys {
         static let language = "appLanguage"
         static let refreshMode = "refreshMode"
+        static let customRefreshSeconds = "customRefreshSeconds"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -40,5 +47,10 @@ final class AppPreferences: ObservableObject {
         } else {
             refreshMode = .smart
         }
+
+        let savedSeconds = defaults.integer(forKey: Keys.customRefreshSeconds)
+        customRefreshSeconds = savedSeconds == 0
+            ? 120
+            : min(max(savedSeconds, 10), 3_600)
     }
 }

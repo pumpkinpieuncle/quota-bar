@@ -43,6 +43,25 @@ enum LocalCollectors {
         }
     }
 
+    static func claudeCollectorNeedsRepair() -> Bool {
+        guard claudeCollectorInstalled() else { return true }
+        let settingsURL = home.appending(path: ".claude/settings.json")
+        guard
+            let data = try? Data(contentsOf: settingsURL),
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let statusLine = object["statusLine"] as? [String: Any],
+            let command = statusLine["command"] as? String,
+            let currentHelper = ClaudeCollectorInstaller.helperURL()?.path
+        else {
+            return true
+        }
+        let configuredPath = command
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "'\""))
+        return URL(fileURLWithPath: configuredPath).standardizedFileURL.path
+            != URL(fileURLWithPath: currentHelper).standardizedFileURL.path
+    }
+
     private static func collectCodex(
         processText: String,
         language: AppLanguage
@@ -145,21 +164,27 @@ enum LocalCollectors {
         let isRunning = containsStandaloneProcess("claude", in: processText)
         let installed = fm.fileExists(atPath: home.appending(path: ".claude").path)
         let collectorInstalled = claudeCollectorInstalled()
+        let collectorNeedsRepair = claudeCollectorNeedsRepair()
 
         guard
             let data = try? Data(contentsOf: cache),
             let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else {
             let detail: String
-            if collectorInstalled {
+            if claudeCommandLinkIsBroken() {
                 detail = language.text(
-                    "等待 Claude 下一次响应后写入额度",
-                    "Waiting for the next Claude response"
+                    "Claude 命令链接失效，请修复后重启 Claude Code",
+                    "Claude command link is broken; repair it and restart Claude Code"
+                )
+            } else if collectorInstalled && !collectorNeedsRepair {
+                detail = language.text(
+                    "等待 Claude 正常响应后写入额度与重置时间",
+                    "Waiting for a normal Claude response to capture quota and reset times"
                 )
             } else if installed {
                 detail = language.text(
-                    "启用零额度 status-line 采集",
-                    "Enable zero-token status-line capture"
+                    "配置或修复零额度 status-line 采集",
+                    "Configure or repair zero-token status-line capture"
                 )
             } else {
                 detail = language.text("未发现 Claude Code", "Claude Code not found")
@@ -171,7 +196,7 @@ enum LocalCollectors {
                 detail: detail,
                 source: language.text("Claude 官方 status line", "Official Claude status line"),
                 lastUpdated: nil,
-                setupAvailable: installed && !collectorInstalled,
+                setupAvailable: installed,
                 isInstalled: installed
             )
         }
@@ -192,7 +217,16 @@ enum LocalCollectors {
             ?? (modelObject?["id"] as? String)
             ?? "Claude"
         let cwd = (object["cwd"] as? String).map { URL(fileURLWithPath: $0).lastPathComponent }
-        let detail = [model, cwd].compactMap { $0 }.joined(separator: " · ")
+        let version = object["version"] as? String
+        let detail: String
+        if limits.isEmpty {
+            detail = language.text(
+                "尚未收到额度字段 · 仅 Pro/Max 首次响应后提供",
+                "No quota fields yet · available to Pro/Max after the first response"
+            )
+        } else {
+            detail = [model, version, cwd].compactMap { $0 }.joined(separator: " · ")
+        }
 
         return ProviderSnapshot(
             id: .claude,
@@ -282,7 +316,7 @@ enum LocalCollectors {
         label: String
     ) -> LimitWindow {
         let used = number(object["used_percentage"]) ?? 0
-        let reset = number(object["resets_at"]).map { Date(timeIntervalSince1970: $0) }
+        let reset = flexibleDate(object["resets_at"])
         return LimitWindow(
             id: id,
             label: label,
@@ -295,6 +329,20 @@ enum LocalCollectors {
         if let number = value as? NSNumber { return number.doubleValue }
         if let string = value as? String { return Double(string) }
         return nil
+    }
+
+    private static func flexibleDate(_ value: Any?) -> Date? {
+        if let epoch = number(value), epoch > 0 {
+            let seconds = epoch > 10_000_000_000 ? epoch / 1_000 : epoch
+            return Date(timeIntervalSince1970: seconds)
+        }
+        guard let string = value as? String else { return nil }
+        if let date = ISO8601DateFormatter().date(from: string) {
+            return date
+        }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.date(from: string)
     }
 
     static func windowLabel(minutes: Int) -> String {
@@ -393,6 +441,17 @@ enum LocalCollectors {
             return .idle
         }
         return state
+    }
+
+    private static func claudeCommandLinkIsBroken() -> Bool {
+        let command = home.appending(path: ".local/bin/claude")
+        guard
+            let attributes = try? fm.attributesOfItem(atPath: command.path),
+            attributes[.type] as? FileAttributeType == .typeSymbolicLink
+        else {
+            return false
+        }
+        return !fm.fileExists(atPath: command.path)
     }
 
     private static func kimiActivity(

@@ -9,7 +9,7 @@ A lightweight native macOS floating panel for Codex, Claude Code, and Kimi Code 
 - 同屏展示三个工具的额度窗口和重置时间。
 - 状态包括：等你审批、当牛马中、思考中、摸鱼中、未运行、需处理。
 - 智能刷新默认在工作中每 30 秒检查一次，全部空闲时降到每 5 分钟。
-- 可选每 30 秒、1 分钟、5 分钟刷新，或完全手动刷新。
+- 可选每 30 秒、1 分钟、5 分钟、自定义 10–3600 秒，或完全手动刷新。
 - 中文与 English 即时切换。
 - 菜单栏常驻、跨桌面置顶、无需打开浏览器。
 
@@ -61,6 +61,8 @@ open "dist/Quota Bar.app"
 4. 只缓存模型名、rate limits、工作目录、会话 ID 和事件名，不保存提示词或回复正文。
 
 重启 Claude Code，并完成一次正常请求后即可看到额度。采集不会主动发起 Claude 请求。
+
+Claude 官方仅对 Claude.ai Pro/Max 订阅用户提供 `rate_limits` 字段，而且当前会话需要先完成一次正常 API 响应。Quota Bar 会显示 5 小时/7 天剩余额度与准确的重置时间；如果 status-line 命令路径因移动 App 而失效，再次点击“配置/修复零额度采集”即可更新路径。
 
 如果已配置其他 status line，Quota Bar 不会覆盖它。可以在现有脚本中额外调用：
 
