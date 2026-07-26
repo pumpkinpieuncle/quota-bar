@@ -17,11 +17,13 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             VisualEffectBackground()
+            Color(red: 0.045, green: 0.052, blue: 0.066)
+                .opacity(0.9)
             LinearGradient(
                 colors: [
-                    Color.white.opacity(0.055),
-                    Color.black.opacity(0.05),
-                    Color.black.opacity(0.16)
+                    Color.white.opacity(0.07),
+                    Color.black.opacity(0.035),
+                    Color.black.opacity(0.12)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -109,38 +111,21 @@ struct ContentView: View {
                 onZoom: { preferences.panelLayout = .standard }
             )
 
-            ZStack {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(Color.white.opacity(0.1))
-                Image(systemName: "gauge.with.dots.needle.67percent")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
-            .frame(width: 30, height: 30)
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Quota Bar")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
-                Text(preferences.language.text("额度与工作状态", "Quota & work status"))
-                    .font(.system(size: 10.5, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.46))
-            }
+            Text("Quota Bar")
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white)
 
             Spacer()
 
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(Color(red: 0.43, green: 0.92, blue: 0.66))
-                    .frame(width: 6, height: 6)
-                    .shadow(color: Color.green.opacity(0.45), radius: 4)
-                Text(preferences.language.text("0 模型调用", "0 model calls"))
-                    .font(.system(size: 10.5, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.68))
+            Button {
+                showSettings.toggle()
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 12, weight: .semibold))
+                    .frame(width: 30, height: 30)
             }
-            .padding(.horizontal, 9)
-            .padding(.vertical, 6)
-            .background(Color.white.opacity(0.065), in: Capsule())
+            .buttonStyle(HeaderButtonStyle())
+            .help(preferences.language.text("设置", "Settings"))
 
             Button {
                 preferences.panelLayout = .compact
@@ -154,16 +139,6 @@ struct ContentView: View {
                 "收成单行",
                 "Collapse to one line"
             ))
-
-            Button {
-                showSettings.toggle()
-            } label: {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 12, weight: .semibold))
-                    .frame(width: 30, height: 30)
-            }
-            .buttonStyle(HeaderButtonStyle())
-            .help(preferences.language.text("设置", "Settings"))
 
             Button {
                 Task { await model.refresh(forceRemote: true) }
@@ -703,40 +678,14 @@ private struct SettingsOverlay: View {
                     "Used by the menu bar and one-line mode"
                 )
             ) {
-                HStack(spacing: 8) {
-                    VStack(spacing: 3) {
-                        Text(language.text("额度", "Quota"))
-                            .font(.system(size: 8.5, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.42))
-                        Picker("", selection: $preferences.quotaWindow) {
-                            ForEach(QuotaWindowPreference.allCases) { window in
-                                Text(window.label(language: language)).tag(window)
-                            }
-                        }
-                        .labelsHidden()
-                        .pickerStyle(.segmented)
-                        .frame(width: 122)
-                    }
-
-                    VStack(spacing: 3) {
-                        Text(language.text("浮窗", "Panel"))
-                            .font(.system(size: 8.5, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.42))
-                        Picker("", selection: $preferences.panelLayout) {
-                            ForEach(PanelLayoutMode.allCases) { mode in
-                                Text(mode.label(language: language)).tag(mode)
-                            }
-                        }
-                        .labelsHidden()
-                        .pickerStyle(.segmented)
-                        .frame(width: 112)
-                        .onChange(of: preferences.panelLayout) { _, mode in
-                            if mode == .compact {
-                                isPresented = false
-                            }
-                        }
+                Picker("", selection: $preferences.quotaWindow) {
+                    ForEach(QuotaWindowPreference.allCases) { window in
+                        Text(window.label(language: language)).tag(window)
                     }
                 }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .frame(width: 170)
             }
 
             HStack(spacing: 7) {

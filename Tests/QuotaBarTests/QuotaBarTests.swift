@@ -147,7 +147,7 @@ import Testing
             preference: .weekly,
             providers: providers
         )
-            == "CX 81%  CL 7%  KM 0%"
+            == "Codex 81%  Claude 7%  Kimi 0%"
     )
     #expect(
         MenuBarSummary.text(
@@ -155,7 +155,7 @@ import Testing
             preference: .fiveHour,
             providers: providers
         )
-            == "CX 31%  CL 42%  KM 53%"
+            == "Codex 31%  Claude 42%  Kimi 53%"
     )
 }
 

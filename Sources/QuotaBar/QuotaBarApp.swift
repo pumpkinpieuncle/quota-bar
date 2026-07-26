@@ -293,8 +293,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 in: sender
             )
         } else {
-            panel?.orderFrontRegardless()
-            updateMenuTitles()
+            togglePanel()
         }
     }
 
@@ -379,12 +378,7 @@ enum MenuBarSummary {
     }
 
     private static func abbreviation(_ provider: ProviderID) -> String {
-        switch provider {
-        case .codex: "CX"
-        case .claude: "CL"
-        case .kimi: "KM"
-        case .deepseek: "DS"
-        }
+        provider.title
     }
 
     static func value(
