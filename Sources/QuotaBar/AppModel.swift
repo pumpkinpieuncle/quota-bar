@@ -203,14 +203,16 @@ final class AppModel: ObservableObject {
 
     func saveDeepSeekAPIKey(_ key: String) async {
         do {
-            try DeepSeekCredentialStore.save(key)
+            let normalized = DeepSeekCredentialStore.normalizedAPIKey(key)
+            _ = try await deepSeekClient.validate(apiKey: normalized)
+            try DeepSeekCredentialStore.save(normalized)
             deepSeekKeyConfigured = true
             preferences.setProvider(.deepseek, hidden: false)
             notice = language.text(
-                "DeepSeek API Key 已安全保存到 macOS 钥匙串。",
-                "DeepSeek API key was saved securely in macOS Keychain."
+                "DeepSeek API Key 验证成功，余额已同步。",
+                "DeepSeek API key verified and balance synced."
             )
-            await refresh(forceRemote: true)
+            await refresh(forceRemote: false)
         } catch {
             notice = deepSeekError(error, language: language)
         }
@@ -277,8 +279,8 @@ final class AppModel: ObservableObject {
                 )
             case .invalidCredential:
                 return language.text(
-                    "DeepSeek API Key 无效",
-                    "The DeepSeek API key is invalid"
+                    "DeepSeek 拒绝了该 Key（401）。请使用开放平台生成的 API Key，不是网页或桌面端登录信息。",
+                    "DeepSeek rejected this key (401). Use an API key created on the developer platform, not web or desktop sign-in details."
                 )
             case .http(let status):
                 return language.text(

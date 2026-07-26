@@ -936,8 +936,8 @@ private struct ProviderManagerOverlay: View {
             }
 
             Text(language.text(
-                "Key 仅存于 macOS 钥匙串；只请求官方 /user/balance，不调用模型。",
-                "Stored only in macOS Keychain; requests official /user/balance only, never a model."
+                "需使用开放平台生成的 API Key（不是网页登录信息）；仅存于钥匙串，只请求 /user/balance。",
+                "Use a developer-platform API key, not web sign-in details. Stored in Keychain; only /user/balance is requested."
             ))
             .font(.system(size: 8.8, weight: .medium))
             .foregroundStyle(.white.opacity(0.4))

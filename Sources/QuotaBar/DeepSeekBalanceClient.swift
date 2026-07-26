@@ -26,8 +26,8 @@ enum DeepSeekCredentialStore {
     }
 
     static func save(_ key: String) throws {
-        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, let data = trimmed.data(using: .utf8) else {
+        let normalized = normalizedAPIKey(key)
+        guard !normalized.isEmpty, let data = normalized.data(using: .utf8) else {
             throw DeepSeekBalanceClient.ClientError.missingCredential
         }
         let query: [String: Any] = [
@@ -62,6 +62,24 @@ enum DeepSeekCredentialStore {
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw DeepSeekBalanceClient.ClientError.keychain(status)
         }
+    }
+
+    static func normalizedAPIKey(_ value: String) -> String {
+        var key = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if key.lowercased().hasPrefix("bearer ") {
+            key = String(key.dropFirst(7))
+        }
+        key = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        if
+            key.count >= 2,
+            let first = key.first,
+            let last = key.last,
+            (first == "\"" && last == "\"") || (first == "'" && last == "'")
+        {
+            key.removeFirst()
+            key.removeLast()
+        }
+        return key.components(separatedBy: .whitespacesAndNewlines).joined()
     }
 }
 
@@ -109,7 +127,16 @@ actor DeepSeekBalanceClient {
         guard let key = DeepSeekCredentialStore.load() else {
             throw ClientError.missingCredential
         }
+        return try await fetch(apiKey: key)
+    }
 
+    func validate(apiKey: String) async throws -> BalanceResult {
+        let key = DeepSeekCredentialStore.normalizedAPIKey(apiKey)
+        guard !key.isEmpty else { throw ClientError.missingCredential }
+        return try await fetch(apiKey: key)
+    }
+
+    private func fetch(apiKey key: String) async throws -> BalanceResult {
         var request = URLRequest(url: balanceURL)
         request.timeoutInterval = 10
         request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")

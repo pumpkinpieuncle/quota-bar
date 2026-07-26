@@ -181,6 +181,21 @@ import Testing
     #expect(result.balances[0].compactText == "¥110")
 }
 
+@Test func normalizesPastedDeepSeekAPIKeys() {
+    #expect(
+        DeepSeekCredentialStore.normalizedAPIKey("  Bearer sk-test-key\n")
+            == "sk-test-key"
+    )
+    #expect(
+        DeepSeekCredentialStore.normalizedAPIKey("\"sk-test-key\"")
+            == "sk-test-key"
+    )
+    #expect(
+        DeepSeekCredentialStore.normalizedAPIKey("sk-test key")
+            == "sk-testkey"
+    )
+}
+
 @MainActor
 @Test func providerVisibilityAndOrderAreConfigurable() throws {
     let suite = "QuotaBarTests.\(UUID().uuidString)"
