@@ -1,14 +1,16 @@
 # Quota Bar
 
-一个轻量、原生的 macOS 菜单栏浮窗，用来查看 Codex、Claude Desktop / Code、Kimi Code 的剩余额度与当前工作状态。
+一个轻量、原生的 macOS 菜单栏浮窗，用来查看 Codex、Claude Desktop / Code、Kimi Code 的剩余额度、DeepSeek API 余额与当前工作状态。
 
-A lightweight native macOS floating panel for Codex, Claude Code, and Kimi Code quotas and work status.
+A lightweight native macOS floating panel for Codex, Claude Code, Kimi Code quotas and work status, plus DeepSeek account balance.
 
 ## 功能 / Features
 
 - 同屏展示三个工具的额度窗口和重置时间。
 - 顶部菜单栏直接显示三个工具的额度，并可切换 5 小时或周额度；左键恢复浮窗，右键打开更多操作。
 - 浮窗支持标准卡片和 72px 高的单行模式；红黄绿三色按钮分别用于隐藏、单行和恢复标准视图。
+- 模型管理支持排序、单独隐藏/显示；顶部栏、标准卡片和单行模式都会采用相同顺序。
+- DeepSeek 可通过官方 `/user/balance` 查看账户余额，API Key 仅保存于 macOS 钥匙串。
 - 状态包括：等你审批、当牛马中、思考中、摸鱼中、未运行、需处理。
 - 智能刷新默认在工作中每 30 秒检查一次，全部空闲时降到每 5 分钟。
 - 可选每 30 秒、1 分钟、5 分钟、自定义 10–3600 秒，或完全手动刷新。
@@ -22,6 +24,7 @@ Quota Bar **不会为了显示状态而消耗 Codex、Claude 或 Kimi 的模型�
 - Codex：通过官方 Codex app-server 的 `account/rateLimits/read` 读取当前登录账号的额度，并读取本地事件和任务进程判断工作状态。该接口不会生成模型回复。
 - Claude Desktop：只读它维护的本地 `plan-usage-history.json`；Claude Code 使用官方 status line 与 **command hooks**。不会使用 prompt/agent hooks，也不会给 Claude 发送测试提示词。
 - Kimi：读取本地会话事件；额度只通过 Kimi Code 官方 `/usages` HTTP 端点同步，它不是模型生成请求。智能模式在 Kimi 空闲时复用本地缓存。
+- DeepSeek：只请求官方 `GET /user/balance` 账户余额接口，不调用对话或补全模型；隐藏后停止远程同步。
 - 不包含模型 SDK、遥测或第三方分析。
 
 额度与工作状态采用不同边界：Codex 额度是账号级数据，同账号登录多台 Mac 时会各自从服务端刷新；“等你审批 / 当牛马中 / 摸鱼中”等状态只描述本机，不上传也不跨设备同步。
@@ -80,6 +83,7 @@ Claude 官方仅对 Claude.ai Pro/Max 订阅用户提供 `rate_limits` 字段，
 
 - Claude/Kimi 的缓存位于 `~/.quotabar/`，权限为仅当前用户可读写。
 - Kimi OAuth token 只在内存中发送到 Kimi 官方域名，不写入日志或 Quota Bar 缓存。
+- DeepSeek API Key 只保存在 macOS 钥匙串中，并仅发送到 `api.deepseek.com/user/balance`。
 - Claude 配置首次修改前会备份为 `~/.claude/settings.json.quotabar-backup`。
 
 ## 发布构建

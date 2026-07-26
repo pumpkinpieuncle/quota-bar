@@ -10,10 +10,12 @@ final class AppModel: ObservableObject {
     @Published var isRefreshing = false
     @Published var notice: String?
     @Published var lastRefresh = Date()
+    @Published var deepSeekKeyConfigured = DeepSeekCredentialStore.load() != nil
 
     let preferences = AppPreferences()
 
     private let codexClient = CodexUsageClient()
+    private let deepSeekClient = DeepSeekBalanceClient()
     private let kimiClient = KimiUsageClient()
     private var scheduledRefresh: Task<Void, Never>?
 
@@ -27,6 +29,12 @@ final class AppModel: ObservableObject {
 
     var refreshPolicyText: String {
         preferences.refreshMode.label(language: language)
+    }
+
+    var visibleSnapshots: [ProviderSnapshot] {
+        preferences.visibleProviderOrder.compactMap { provider in
+            snapshots.first { $0.id == provider }
+        }
     }
 
     func start() {
@@ -49,8 +57,33 @@ final class AppModel: ObservableObject {
             LocalCollectors.collect(language: currentLanguage)
         }.value
         var merged = [bundle.codex, bundle.claude, bundle.kimi]
+        merged.append(
+            ProviderSnapshot(
+                id: .deepseek,
+                activity: deepSeekKeyConfigured ? .connected : .needsAttention,
+                limits: [],
+                detail: currentLanguage.text(
+                    deepSeekKeyConfigured
+                        ? "等待同步账户余额"
+                        : "在模型管理中配置 API Key",
+                    deepSeekKeyConfigured
+                        ? "Waiting to sync account balance"
+                        : "Configure an API key in Model management"
+                ),
+                source: currentLanguage.text(
+                    "DeepSeek 官方账户余额接口",
+                    "Official DeepSeek account balance endpoint"
+                ),
+                lastUpdated: nil,
+                setupAvailable: !deepSeekKeyConfigured,
+                isInstalled: deepSeekKeyConfigured
+            )
+        )
 
-        if bundle.codex.isInstalled {
+        if
+            bundle.codex.isInstalled,
+            !preferences.hiddenProviders.contains(.codex)
+        {
             do {
                 let usage = try await codexClient.fetchIfNeeded(
                     force: forceRemote,
@@ -78,7 +111,10 @@ final class AppModel: ObservableObject {
             }
         }
 
-        if bundle.kimi.isInstalled {
+        if
+            bundle.kimi.isInstalled,
+            !preferences.hiddenProviders.contains(.kimi)
+        {
             do {
                 let kimiIsActive = bundle.kimi.activity.isActive
                 let usage = try await kimiClient.fetchIfNeeded(
@@ -102,6 +138,34 @@ final class AppModel: ObservableObject {
                         merged[index].activity = .needsAttention
                     }
                     merged[index].detail = kimiError(error, language: currentLanguage)
+                }
+            }
+        }
+
+        if
+            deepSeekKeyConfigured,
+            !preferences.hiddenProviders.contains(.deepseek)
+        {
+            do {
+                let balance = try await deepSeekClient.fetchIfNeeded(force: forceRemote)
+                if let index = merged.firstIndex(where: { $0.id == .deepseek }) {
+                    merged[index].balances = balance.balances
+                    merged[index].lastUpdated = balance.fetchedAt
+                    merged[index].activity = balance.isAvailable
+                        ? .connected
+                        : .needsAttention
+                    let primary = balance.balances.first
+                    merged[index].detail = currentLanguage.text(
+                        primary.map { "账户余额 \($0.compactText)" }
+                            ?? "已同步账户余额",
+                        primary.map { "Account balance \($0.compactText)" }
+                            ?? "Account balance synced"
+                    )
+                }
+            } catch {
+                if let index = merged.firstIndex(where: { $0.id == .deepseek }) {
+                    merged[index].activity = .needsAttention
+                    merged[index].detail = deepSeekError(error, language: currentLanguage)
                 }
             }
         }
@@ -135,6 +199,35 @@ final class AppModel: ObservableObject {
 
     func dismissNotice() {
         notice = nil
+    }
+
+    func saveDeepSeekAPIKey(_ key: String) async {
+        do {
+            try DeepSeekCredentialStore.save(key)
+            deepSeekKeyConfigured = true
+            preferences.setProvider(.deepseek, hidden: false)
+            notice = language.text(
+                "DeepSeek API Key 已安全保存到 macOS 钥匙串。",
+                "DeepSeek API key was saved securely in macOS Keychain."
+            )
+            await refresh(forceRemote: true)
+        } catch {
+            notice = deepSeekError(error, language: language)
+        }
+    }
+
+    func removeDeepSeekAPIKey() async {
+        do {
+            try DeepSeekCredentialStore.delete()
+            deepSeekKeyConfigured = false
+            notice = language.text(
+                "DeepSeek API Key 已从 macOS 钥匙串移除。",
+                "DeepSeek API key was removed from macOS Keychain."
+            )
+            await refresh(forceRemote: false)
+        } catch {
+            notice = deepSeekError(error, language: language)
+        }
     }
 
     private func scheduleNextRefresh() {
@@ -172,5 +265,38 @@ final class AppModel: ObservableObject {
             }
         }
         return language.text("Kimi 额度同步失败", "Kimi quota sync failed")
+    }
+
+    private func deepSeekError(_ error: Error, language: AppLanguage) -> String {
+        if let clientError = error as? DeepSeekBalanceClient.ClientError {
+            switch clientError {
+            case .missingCredential:
+                return language.text(
+                    "请先配置 DeepSeek API Key",
+                    "Configure a DeepSeek API key first"
+                )
+            case .invalidCredential:
+                return language.text(
+                    "DeepSeek API Key 无效",
+                    "The DeepSeek API key is invalid"
+                )
+            case .http(let status):
+                return language.text(
+                    "DeepSeek 余额接口返回 HTTP \(status)",
+                    "DeepSeek balance endpoint returned HTTP \(status)"
+                )
+            case .keychain:
+                return language.text(
+                    "无法访问 macOS 钥匙串",
+                    "Could not access macOS Keychain"
+                )
+            case .invalidResponse:
+                return language.text(
+                    "DeepSeek 返回了无法识别的余额数据",
+                    "DeepSeek returned unreadable balance data"
+                )
+            }
+        }
+        return language.text("DeepSeek 余额同步失败", "DeepSeek balance sync failed")
     }
 }

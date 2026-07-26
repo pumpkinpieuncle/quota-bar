@@ -4,6 +4,7 @@ enum ProviderID: String, CaseIterable, Identifiable, Sendable {
     case codex
     case claude
     case kimi
+    case deepseek
 
     var id: String { rawValue }
 
@@ -12,6 +13,7 @@ enum ProviderID: String, CaseIterable, Identifiable, Sendable {
         case .codex: "Codex"
         case .claude: "Claude"
         case .kimi: "Kimi"
+        case .deepseek: "DeepSeek"
         }
     }
 
@@ -20,6 +22,7 @@ enum ProviderID: String, CaseIterable, Identifiable, Sendable {
         case .codex: "chevron.left.forwardslash.chevron.right"
         case .claude: "sparkles"
         case .kimi: "moon.stars.fill"
+        case .deepseek: "water.waves"
         }
     }
 }
@@ -31,6 +34,7 @@ enum ActivityState: String, Sendable {
     case idle
     case offline
     case needsAttention
+    case connected
 
     func label(language: AppLanguage) -> String {
         switch (self, language) {
@@ -40,17 +44,39 @@ enum ActivityState: String, Sendable {
         case (.idle, .chinese): "摸鱼中"
         case (.offline, .chinese): "未运行"
         case (.needsAttention, .chinese): "需处理"
+        case (.connected, .chinese): "已连接"
         case (.waitingApproval, .english): "Awaiting approval"
         case (.working, .english): "Working"
         case (.thinking, .english): "Thinking"
         case (.idle, .english): "Idle"
         case (.offline, .english): "Not running"
         case (.needsAttention, .english): "Needs attention"
+        case (.connected, .english): "Connected"
         }
     }
 
     var isActive: Bool {
         self == .waitingApproval || self == .working || self == .thinking
+    }
+}
+
+struct AccountBalance: Equatable, Sendable {
+    let currency: String
+    let total: Decimal
+    let granted: Decimal
+    let toppedUp: Decimal
+
+    var symbol: String {
+        switch currency.uppercased() {
+        case "CNY": "¥"
+        case "USD": "$"
+        case "EUR": "€"
+        default: "\(currency.uppercased()) "
+        }
+    }
+
+    var compactText: String {
+        "\(symbol)\(NSDecimalNumber(decimal: total).stringValue)"
     }
 }
 
@@ -105,6 +131,10 @@ enum PanelLayoutMode: String, CaseIterable, Identifiable, Sendable {
         case .compact: 72
         }
     }
+
+    func panelWidth(visibleProviderCount: Int) -> Double {
+        visibleProviderCount > 3 ? 720 : 600
+    }
 }
 
 enum QuotaWindowSelector {
@@ -138,6 +168,7 @@ struct ProviderSnapshot: Identifiable, Equatable, Sendable {
     var lastUpdated: Date?
     var setupAvailable: Bool
     var isInstalled: Bool
+    var balances: [AccountBalance] = []
 
     static func placeholder(_ id: ProviderID) -> ProviderSnapshot {
         ProviderSnapshot(

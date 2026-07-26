@@ -5,6 +5,7 @@ struct ContentView: View {
     @ObservedObject var model: AppModel
     @ObservedObject private var preferences: AppPreferences
     @State private var showSettings = false
+    @State private var showProviderManager = false
     let onHideToMenuBar: () -> Void
 
     init(model: AppModel, onHideToMenuBar: @escaping () -> Void = {}) {
@@ -39,12 +40,30 @@ struct ContentView: View {
             }
 
             if showSettings, preferences.panelLayout == .standard {
-                SettingsOverlay(model: model, isPresented: $showSettings)
+                SettingsOverlay(
+                    model: model,
+                    isPresented: $showSettings,
+                    showProviderManager: $showProviderManager
+                )
                     .padding(12)
                     .transition(.scale(scale: 0.96).combined(with: .opacity))
             }
+
+            if showProviderManager, preferences.panelLayout == .standard {
+                ProviderManagerOverlay(
+                    model: model,
+                    isPresented: $showProviderManager
+                )
+                .padding(12)
+                .transition(.scale(scale: 0.96).combined(with: .opacity))
+            }
         }
-        .frame(width: 600, height: preferences.panelLayout.panelHeight)
+        .frame(
+            width: preferences.panelLayout.panelWidth(
+                visibleProviderCount: preferences.visibleProviderOrder.count
+            ),
+            height: preferences.panelLayout.panelHeight
+        )
         .clipShape(RoundedRectangle(cornerRadius: panelCornerRadius, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: panelCornerRadius, style: .continuous)
@@ -168,11 +187,12 @@ struct ContentView: View {
 
     private var cards: some View {
         HStack(spacing: 10) {
-            ForEach(model.snapshots) { snapshot in
+            ForEach(model.visibleSnapshots) { snapshot in
                 ProviderCard(
                     snapshot: snapshot,
                     language: preferences.language,
-                    installClaudeCollector: model.installClaudeCollector
+                    installClaudeCollector: model.installClaudeCollector,
+                    manageProviders: { showProviderManager = true }
                 )
             }
         }
@@ -205,7 +225,7 @@ struct ContentView: View {
                 onZoom: { preferences.panelLayout = .standard }
             )
 
-            ForEach(model.snapshots) { snapshot in
+            ForEach(model.visibleSnapshots) { snapshot in
                 compactProvider(snapshot)
             }
 
@@ -238,9 +258,9 @@ struct ContentView: View {
             in: snapshot.limits,
             preference: preferences.quotaWindow
         )
-        let quota = limit.map {
-            "\(Int($0.clampedRemaining.rounded()))%"
-        } ?? "—"
+        let quota = snapshot.balances.first?.compactText
+            ?? limit.map { "\(Int($0.clampedRemaining.rounded()))%" }
+            ?? "—"
         return HStack(spacing: 5) {
             Circle()
                 .fill(compactActivityColor(snapshot.activity))
@@ -276,6 +296,7 @@ struct ContentView: View {
         case .working: Color(red: 0.43, green: 0.92, blue: 0.66)
         case .thinking: Color(red: 0.48, green: 0.7, blue: 1)
         case .needsAttention: Color.orange
+        case .connected: Color(red: 0.43, green: 0.92, blue: 0.66)
         case .idle: Color.white.opacity(0.35)
         case .offline: Color.white.opacity(0.2)
         }
@@ -345,12 +366,14 @@ private struct ProviderCard: View {
     let snapshot: ProviderSnapshot
     let language: AppLanguage
     let installClaudeCollector: () -> Void
+    let manageProviders: () -> Void
 
     private var accent: Color {
         switch snapshot.id {
         case .codex: Color(red: 0.37, green: 0.83, blue: 0.67)
         case .claude: Color(red: 0.94, green: 0.61, blue: 0.39)
         case .kimi: Color(red: 0.55, green: 0.66, blue: 1.0)
+        case .deepseek: Color(red: 0.35, green: 0.76, blue: 0.96)
         }
     }
 
@@ -362,6 +385,7 @@ private struct ProviderCard: View {
         case .idle: Color.white.opacity(0.34)
         case .offline: Color.white.opacity(0.2)
         case .needsAttention: Color(red: 1, green: 0.69, blue: 0.3)
+        case .connected: Color(red: 0.43, green: 0.92, blue: 0.66)
         }
     }
 
@@ -392,7 +416,35 @@ private struct ProviderCard: View {
                 }
             }
 
-            if let primary = snapshot.limits.first {
+            if let balance = snapshot.balances.first {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .firstTextBaseline, spacing: 3) {
+                        Text(balance.compactText)
+                            .font(.system(size: 25, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                        Spacer()
+                        Text(language.text("余额", "balance"))
+                            .font(.system(size: 9.5, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.42))
+                    }
+
+                    HStack {
+                        Text(language.text("充值", "Topped up"))
+                        Spacer()
+                        Text("\(balance.symbol)\(NSDecimalNumber(decimal: balance.toppedUp).stringValue)")
+                    }
+                    HStack {
+                        Text(language.text("赠送", "Granted"))
+                        Spacer()
+                        Text("\(balance.symbol)\(NSDecimalNumber(decimal: balance.granted).stringValue)")
+                    }
+                    .padding(.top, 2)
+                }
+                .font(.system(size: 9.5, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.53))
+            } else if let primary = snapshot.limits.first {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(alignment: .firstTextBaseline, spacing: 3) {
                         Text("\(Int(primary.clampedRemaining.rounded()))")
@@ -455,6 +507,12 @@ private struct ProviderCard: View {
                             action: installClaudeCollector
                         )
                             .buttonStyle(CollectorButtonStyle(tint: accent))
+                    } else if snapshot.id == .deepseek {
+                        Button(
+                            language.text("管理 DeepSeek", "Manage DeepSeek"),
+                            action: manageProviders
+                        )
+                        .buttonStyle(CollectorButtonStyle(tint: accent))
                     } else {
                         Spacer(minLength: 24)
                     }
@@ -541,11 +599,17 @@ private struct SettingsOverlay: View {
     @ObservedObject var model: AppModel
     @ObservedObject private var preferences: AppPreferences
     @Binding var isPresented: Bool
+    @Binding var showProviderManager: Bool
 
-    init(model: AppModel, isPresented: Binding<Bool>) {
+    init(
+        model: AppModel,
+        isPresented: Binding<Bool>,
+        showProviderManager: Binding<Bool>
+    ) {
         self.model = model
         _preferences = ObservedObject(wrappedValue: model.preferences)
         _isPresented = isPresented
+        _showProviderManager = showProviderManager
     }
 
     private var language: AppLanguage { preferences.language }
@@ -561,6 +625,17 @@ private struct SettingsOverlay: View {
                         .foregroundStyle(.white.opacity(0.42))
                 }
                 Spacer()
+                Button {
+                    isPresented = false
+                    showProviderManager = true
+                } label: {
+                    Image(systemName: "list.bullet")
+                        .font(.system(size: 10, weight: .bold))
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(HeaderButtonStyle())
+                .help(language.text("模型排序与隐藏", "Model order and visibility"))
+
                 Button {
                     isPresented = false
                 } label: {
@@ -734,6 +809,199 @@ private struct SettingsOverlay: View {
     }
 }
 
+private struct ProviderManagerOverlay: View {
+    @ObservedObject var model: AppModel
+    @ObservedObject private var preferences: AppPreferences
+    @Binding var isPresented: Bool
+    @State private var apiKey = ""
+    @State private var isSaving = false
+
+    init(model: AppModel, isPresented: Binding<Bool>) {
+        self.model = model
+        _preferences = ObservedObject(wrappedValue: model.preferences)
+        _isPresented = isPresented
+    }
+
+    private var language: AppLanguage { preferences.language }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(language.text("模型管理", "Model management"))
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    Text(language.text(
+                        "调整排序，或隐藏不需要的服务",
+                        "Reorder or hide services you do not need"
+                    ))
+                    .font(.system(size: 9.5, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.42))
+                }
+                Spacer()
+                Button {
+                    isPresented = false
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(HeaderButtonStyle())
+            }
+
+            HStack(alignment: .top, spacing: 12) {
+                VStack(spacing: 6) {
+                    ForEach(Array(preferences.providerOrder.enumerated()), id: \.element) {
+                        index, provider in
+                        providerRow(provider, index: index)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+
+                deepSeekSetup
+                    .frame(width: 250)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color(red: 0.075, green: 0.085, blue: 0.105).opacity(0.98))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
+                }
+        )
+        .shadow(color: .black.opacity(0.42), radius: 20, y: 8)
+    }
+
+    private func providerRow(_ provider: ProviderID, index: Int) -> some View {
+        let isHidden = preferences.hiddenProviders.contains(provider)
+        return HStack(spacing: 7) {
+            Image(systemName: provider.symbol)
+                .font(.system(size: 10, weight: .semibold))
+                .frame(width: 20)
+                .foregroundStyle(.white.opacity(isHidden ? 0.28 : 0.72))
+            Text(provider.title)
+                .font(.system(size: 10.5, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(isHidden ? 0.35 : 0.82))
+            Spacer()
+            Button {
+                let willHide = !isHidden
+                preferences.setProvider(provider, hidden: willHide)
+                if !willHide {
+                    Task { await model.refresh(forceRemote: false) }
+                }
+            } label: {
+                Image(systemName: isHidden ? "eye.slash" : "eye")
+                    .frame(width: 23, height: 23)
+            }
+            .buttonStyle(ManagerButtonStyle())
+            .help(language.text(
+                isHidden ? "显示" : "隐藏",
+                isHidden ? "Show" : "Hide"
+            ))
+
+            Button {
+                preferences.moveProvider(provider, offset: -1)
+            } label: {
+                Image(systemName: "chevron.up")
+                    .frame(width: 22, height: 22)
+            }
+            .buttonStyle(ManagerButtonStyle())
+            .disabled(index == 0)
+
+            Button {
+                preferences.moveProvider(provider, offset: 1)
+            } label: {
+                Image(systemName: "chevron.down")
+                    .frame(width: 22, height: 22)
+            }
+            .buttonStyle(ManagerButtonStyle())
+            .disabled(index == preferences.providerOrder.count - 1)
+        }
+        .padding(.horizontal, 8)
+        .frame(height: 31)
+        .background(
+            Color.white.opacity(isHidden ? 0.025 : 0.05),
+            in: RoundedRectangle(cornerRadius: 9, style: .continuous)
+        )
+    }
+
+    private var deepSeekSetup: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: ProviderID.deepseek.symbol)
+                    .foregroundStyle(Color(red: 0.35, green: 0.76, blue: 0.96))
+                Text("DeepSeek")
+                    .font(.system(size: 11.5, weight: .semibold, design: .rounded))
+                Spacer()
+                Text(model.deepSeekKeyConfigured
+                    ? language.text("已配置", "Configured")
+                    : language.text("未配置", "Not configured"))
+                    .font(.system(size: 8.5, weight: .bold))
+                    .foregroundStyle(
+                        model.deepSeekKeyConfigured
+                            ? Color.green.opacity(0.75)
+                            : Color.white.opacity(0.35)
+                    )
+            }
+
+            SecureField(
+                model.deepSeekKeyConfigured
+                    ? language.text("输入新 Key 可替换", "Enter a new key to replace")
+                    : "sk-…",
+                text: $apiKey
+            )
+            .textFieldStyle(.roundedBorder)
+
+            HStack(spacing: 7) {
+                Button {
+                    let key = apiKey
+                    guard !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                        return
+                    }
+                    isSaving = true
+                    Task {
+                        await model.saveDeepSeekAPIKey(key)
+                        apiKey = ""
+                        isSaving = false
+                    }
+                } label: {
+                    Text(isSaving
+                        ? language.text("验证中…", "Checking…")
+                        : language.text("保存并验证", "Save & verify"))
+                }
+                .buttonStyle(CollectorButtonStyle(
+                    tint: Color(red: 0.35, green: 0.76, blue: 0.96)
+                ))
+                .disabled(isSaving || apiKey.isEmpty)
+
+                if model.deepSeekKeyConfigured {
+                    Button {
+                        Task { await model.removeDeepSeekAPIKey() }
+                    } label: {
+                        Text(language.text("移除", "Remove"))
+                    }
+                    .buttonStyle(CollectorButtonStyle(tint: .orange))
+                }
+            }
+
+            Text(language.text(
+                "Key 仅存于 macOS 钥匙串；只请求官方 /user/balance，不调用模型。",
+                "Stored only in macOS Keychain; requests official /user/balance only, never a model."
+            ))
+            .font(.system(size: 8.8, weight: .medium))
+            .foregroundStyle(.white.opacity(0.4))
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(11)
+        .background(
+            Color.white.opacity(0.045),
+            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+        )
+    }
+}
+
 private struct QuotaProgress: View {
     let value: Double
     let tint: Color
@@ -755,6 +1023,18 @@ private struct QuotaProgress: View {
             }
         }
         .frame(height: 5)
+    }
+}
+
+private struct ManagerButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 8.5, weight: .bold))
+            .foregroundStyle(.white.opacity(configuration.isPressed ? 0.4 : 0.64))
+            .background(
+                Color.white.opacity(configuration.isPressed ? 0.09 : 0.045),
+                in: RoundedRectangle(cornerRadius: 7, style: .continuous)
+            )
     }
 }
 

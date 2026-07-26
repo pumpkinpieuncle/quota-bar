@@ -24,6 +24,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var snapshotObservation: AnyCancellable?
     private var quotaWindowObservation: AnyCancellable?
     private var panelLayoutObservation: AnyCancellable?
+    private var providerOrderObservation: AnyCancellable?
+    private var hiddenProvidersObservation: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -38,7 +40,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func makePanel() {
         let size = NSSize(
-            width: 600,
+            width: model.preferences.panelLayout.panelWidth(
+                visibleProviderCount: model.preferences.visibleProviderOrder.count
+            ),
             height: model.preferences.panelLayout.panelHeight
         )
         let panel = FloatingPanel(
@@ -185,6 +189,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 self.updateStatusItem(snapshots: self.model.snapshots)
                 self.updateMenuTitles()
             }
+        providerOrderObservation = model.preferences.$providerOrder
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.updateStatusItem(snapshots: self.model.snapshots)
+                self.updateMenuTitles()
+            }
+        hiddenProvidersObservation = model.preferences.$hiddenProviders
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.updateStatusItem(snapshots: self.model.snapshots)
+                self.updateMenuTitles()
+                self.resizePanel(for: self.model.preferences.panelLayout)
+            }
     }
 
     func menuWillOpen(_ menu: NSMenu) {
@@ -212,32 +233,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func updateStatusItem(snapshots: [ProviderSnapshot]) {
         let summary = MenuBarSummary.text(
             snapshots: snapshots,
-            preference: model.preferences.quotaWindow
+            preference: model.preferences.quotaWindow,
+            providers: model.preferences.visibleProviderOrder
         )
         statusItem?.button?.title = summary
         statusItem?.button?.toolTip = MenuBarSummary.accessibilityText(
             snapshots: snapshots,
             language: model.language,
-            preference: model.preferences.quotaWindow
+            preference: model.preferences.quotaWindow,
+            providers: model.preferences.visibleProviderOrder
         )
         updateQuotaMenuItems(snapshots: snapshots)
     }
 
     private func updateQuotaMenuItems(snapshots: [ProviderSnapshot]) {
-        for provider in ProviderID.allCases {
+        if let statusMenu {
+            for provider in model.preferences.providerOrder {
+                guard let item = quotaMenuItems[provider] else { continue }
+                statusMenu.removeItem(item)
+            }
+            for (offset, provider) in model.preferences.providerOrder.enumerated() {
+                guard let item = quotaMenuItems[provider] else { continue }
+                statusMenu.insertItem(item, at: min(2 + offset, statusMenu.items.count))
+            }
+        }
+
+        for provider in model.preferences.providerOrder {
             guard let item = quotaMenuItems[provider] else { continue }
             let snapshot = snapshots.first { $0.id == provider }
             let quota = snapshot.flatMap {
-                QuotaWindowSelector.limit(
-                    in: $0.limits,
+                MenuBarSummary.value(
+                    snapshot: $0,
                     preference: model.preferences.quotaWindow
                 )
-            }.map {
-                "\(Int($0.clampedRemaining.rounded()))%"
             } ?? "—"
             let state = snapshot?.activity.label(language: model.language)
                 ?? ActivityState.offline.label(language: model.language)
             item.title = "\(provider.title)  \(quota)  ·  \(state)"
+            item.isHidden = model.preferences.hiddenProviders.contains(provider)
         }
     }
 
@@ -273,7 +306,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func resizePanel(for mode: PanelLayoutMode) {
         guard let panel else { return }
         let oldFrame = panel.frame
-        let newSize = NSSize(width: 600, height: mode.panelHeight)
+        let newSize = NSSize(
+            width: mode.panelWidth(
+                visibleProviderCount: model.preferences.visibleProviderOrder.count
+            ),
+            height: mode.panelHeight
+        )
         let origin = NSPoint(
             x: oldFrame.maxX - newSize.width,
             y: oldFrame.maxY - newSize.height
@@ -308,18 +346,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 enum MenuBarSummary {
     static func text(
         snapshots: [ProviderSnapshot],
-        preference: QuotaWindowPreference
+        preference: QuotaWindowPreference,
+        providers: [ProviderID]
     ) -> String {
-        let values = ProviderID.allCases.map { provider in
+        let values = providers.map { provider in
             let quota = snapshots
                 .first { $0.id == provider }
-                .flatMap {
-                    QuotaWindowSelector.limit(
-                        in: $0.limits,
-                        preference: preference
-                    )
-                }
-                .map { "\(Int($0.clampedRemaining.rounded()))%" } ?? "—"
+                .flatMap { value(snapshot: $0, preference: preference) }
+                ?? "—"
             return "\(abbreviation(provider)) \(quota)"
         }
         return values.joined(separator: "  ")
@@ -328,18 +362,13 @@ enum MenuBarSummary {
     static func accessibilityText(
         snapshots: [ProviderSnapshot],
         language: AppLanguage,
-        preference: QuotaWindowPreference
+        preference: QuotaWindowPreference,
+        providers: [ProviderID]
     ) -> String {
-        let values = ProviderID.allCases.map { provider in
+        let values = providers.map { provider in
             let quota = snapshots
                 .first { $0.id == provider }
-                .flatMap {
-                    QuotaWindowSelector.limit(
-                        in: $0.limits,
-                        preference: preference
-                    )
-                }
-                .map { "\(Int($0.clampedRemaining.rounded()))%" }
+                .flatMap { value(snapshot: $0, preference: preference) }
                 ?? language.text("未知", "unknown")
             return "\(provider.title) \(quota)"
         }
@@ -354,7 +383,21 @@ enum MenuBarSummary {
         case .codex: "CX"
         case .claude: "CL"
         case .kimi: "KM"
+        case .deepseek: "DS"
         }
+    }
+
+    static func value(
+        snapshot: ProviderSnapshot,
+        preference: QuotaWindowPreference
+    ) -> String? {
+        if let balance = snapshot.balances.first {
+            return balance.compactText
+        }
+        return QuotaWindowSelector.limit(
+            in: snapshot.limits,
+            preference: preference
+        ).map { "\(Int($0.clampedRemaining.rounded()))%" }
     }
 }
 

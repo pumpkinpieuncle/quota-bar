@@ -115,7 +115,8 @@ import Testing
 }
 
 @Test func menuBarShowsAllProviderQuotas() {
-    let snapshots = ProviderID.allCases.enumerated().map { index, provider in
+    let providers: [ProviderID] = [.codex, .claude, .kimi]
+    let snapshots = providers.enumerated().map { index, provider in
         ProviderSnapshot(
             id: provider,
             activity: .idle,
@@ -141,11 +142,62 @@ import Testing
         )
     }
     #expect(
-        MenuBarSummary.text(snapshots: snapshots, preference: .weekly)
+        MenuBarSummary.text(
+            snapshots: snapshots,
+            preference: .weekly,
+            providers: providers
+        )
             == "CX 81%  CL 7%  KM 0%"
     )
     #expect(
-        MenuBarSummary.text(snapshots: snapshots, preference: .fiveHour)
+        MenuBarSummary.text(
+            snapshots: snapshots,
+            preference: .fiveHour,
+            providers: providers
+        )
             == "CX 31%  CL 42%  KM 53%"
     )
+}
+
+@Test func readsDeepSeekBalance() throws {
+    let payload = """
+    {
+      "is_available": true,
+      "balance_infos": [
+        {
+          "currency": "CNY",
+          "total_balance": "110.00",
+          "granted_balance": "10.00",
+          "topped_up_balance": "100.00"
+        }
+      ]
+    }
+    """
+    let result = try DeepSeekBalanceClient.parseResponse(Data(payload.utf8))
+    #expect(result.isAvailable)
+    #expect(result.balances.count == 1)
+    #expect(result.balances[0].currency == "CNY")
+    #expect(result.balances[0].total == Decimal(string: "110.00"))
+    #expect(result.balances[0].compactText == "¥110")
+}
+
+@MainActor
+@Test func providerVisibilityAndOrderAreConfigurable() throws {
+    let suite = "QuotaBarTests.\(UUID().uuidString)"
+    let defaults = try #require(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+
+    let preferences = AppPreferences(defaults: defaults)
+    #expect(preferences.hiddenProviders == [.deepseek])
+    preferences.setProvider(.deepseek, hidden: false)
+    #expect(preferences.visibleProviderOrder.contains(.deepseek))
+
+    preferences.moveProvider(.deepseek, offset: -1)
+    #expect(preferences.providerOrder == [.codex, .claude, .deepseek, .kimi])
+
+    preferences.setProvider(.codex, hidden: true)
+    preferences.setProvider(.claude, hidden: true)
+    preferences.setProvider(.kimi, hidden: true)
+    preferences.setProvider(.deepseek, hidden: true)
+    #expect(preferences.visibleProviderOrder == [.deepseek])
 }

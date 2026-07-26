@@ -25,6 +25,21 @@ final class AppPreferences: ObservableObject {
         didSet { defaults.set(panelLayout.rawValue, forKey: Keys.panelLayout) }
     }
 
+    @Published var providerOrder: [ProviderID] {
+        didSet {
+            defaults.set(providerOrder.map(\.rawValue), forKey: Keys.providerOrder)
+        }
+    }
+
+    @Published var hiddenProviders: Set<ProviderID> {
+        didSet {
+            defaults.set(
+                hiddenProviders.map(\.rawValue).sorted(),
+                forKey: Keys.hiddenProviders
+            )
+        }
+    }
+
     private let defaults: UserDefaults
 
     private enum Keys {
@@ -33,6 +48,8 @@ final class AppPreferences: ObservableObject {
         static let customRefreshSeconds = "customRefreshSeconds"
         static let quotaWindow = "quotaWindow"
         static let panelLayout = "panelLayout"
+        static let providerOrder = "providerOrder"
+        static let hiddenProviders = "hiddenProviders"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -80,5 +97,46 @@ final class AppPreferences: ObservableObject {
         } else {
             panelLayout = .standard
         }
+
+        let savedOrder = (defaults.stringArray(forKey: Keys.providerOrder) ?? [])
+            .compactMap(ProviderID.init(rawValue:))
+        providerOrder = savedOrder
+            + ProviderID.allCases.filter { !savedOrder.contains($0) }
+
+        if defaults.object(forKey: Keys.hiddenProviders) != nil {
+            hiddenProviders = Set(
+                (defaults.stringArray(forKey: Keys.hiddenProviders) ?? [])
+                    .compactMap(ProviderID.init(rawValue:))
+            )
+        } else {
+            hiddenProviders = [.deepseek]
+        }
+    }
+
+    var visibleProviderOrder: [ProviderID] {
+        providerOrder.filter { !hiddenProviders.contains($0) }
+    }
+
+    func setProvider(_ provider: ProviderID, hidden: Bool) {
+        var next = hiddenProviders
+        if hidden {
+            guard visibleProviderOrder.count > 1 else { return }
+            next.insert(provider)
+        } else {
+            next.remove(provider)
+        }
+        hiddenProviders = next
+    }
+
+    func moveProvider(_ provider: ProviderID, offset: Int) {
+        guard
+            let oldIndex = providerOrder.firstIndex(of: provider),
+            providerOrder.indices.contains(oldIndex + offset)
+        else {
+            return
+        }
+        var next = providerOrder
+        next.swapAt(oldIndex, oldIndex + offset)
+        providerOrder = next
     }
 }
