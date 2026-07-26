@@ -240,7 +240,7 @@ actor KimiUsageClient {
 
     private func applyKimiHeaders(to request: inout URLRequest) {
         request.setValue("kimi_cli", forHTTPHeaderField: "X-Msh-Platform")
-        request.setValue("QuotaBar/1.2.2", forHTTPHeaderField: "X-Msh-Version")
+        request.setValue("QuotaBar/1.2.3", forHTTPHeaderField: "X-Msh-Version")
         if let deviceID = try? String(
             contentsOf: home.appending(path: ".kimi-code/device_id"),
             encoding: .utf8

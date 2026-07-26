@@ -31,6 +31,7 @@ final class MenuBarMarqueeView: NSView {
     private let textClipView = NSView()
     private let label = NSTextField(labelWithString: "")
     private var currentText = ""
+    private(set) var cycleDuration: CFTimeInterval = 0
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -47,6 +48,9 @@ final class MenuBarMarqueeView: NSView {
         label.isEditable = false
         label.isSelectable = false
         label.textColor = .labelColor
+        label.lineBreakMode = .byClipping
+        label.maximumNumberOfLines = 1
+        label.cell?.usesSingleLineMode = true
         label.wantsLayer = true
         textClipView.addSubview(label)
     }
@@ -86,16 +90,21 @@ final class MenuBarMarqueeView: NSView {
         label.font = font
         label.stringValue = cycle + cycle
         label.sizeToFit()
-        layoutSubtreeIfNeeded()
-
         let cycleWidth = (cycle as NSString).size(
             withAttributes: [.font: font]
         ).width
+        let completeWidth = ((cycle + cycle) as NSString).size(
+            withAttributes: [.font: font]
+        ).width
+        label.frame.size.width = ceil(completeWidth)
+        layoutSubtreeIfNeeded()
+
         label.layer?.removeAllAnimations()
         let animation = CABasicAnimation(keyPath: "transform.translation.x")
         animation.fromValue = 0
         animation.toValue = -cycleWidth
-        animation.duration = max(8, Double(cycleWidth / 24))
+        animation.duration = min(12, max(6, Double(cycleWidth / 40)))
+        cycleDuration = animation.duration
         animation.repeatCount = .infinity
         animation.timingFunction = CAMediaTimingFunction(name: .linear)
         animation.isRemovedOnCompletion = false
@@ -109,6 +118,10 @@ final class MenuBarMarqueeView: NSView {
 
     var isAnimating: Bool {
         label.layer?.animation(forKey: "marquee") != nil
+    }
+
+    var renderedText: String {
+        label.stringValue
     }
 }
 

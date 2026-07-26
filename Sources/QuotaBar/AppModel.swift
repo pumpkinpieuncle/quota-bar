@@ -23,7 +23,7 @@ final class AppModel: ObservableObject {
 
     var versionText: String {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString")
-            as? String ?? "1.2.2"
+            as? String ?? "1.2.3"
         return "v\(version)"
     }
 

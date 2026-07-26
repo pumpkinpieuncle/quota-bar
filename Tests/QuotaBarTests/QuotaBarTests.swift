@@ -211,6 +211,12 @@ import Testing
         font: .monospacedSystemFont(ofSize: 11, weight: .semibold)
     )
     #expect(marquee.isAnimating)
+    #expect(marquee.renderedText.contains("Codex 60%"))
+    #expect(marquee.renderedText.contains("Claude 71%"))
+    #expect(marquee.renderedText.contains("Kimi 0%"))
+    #expect(marquee.renderedText.contains("DeepSeek ¥5.47"))
+    #expect(marquee.cycleDuration >= 6)
+    #expect(marquee.cycleDuration <= 12)
     marquee.stop()
     #expect(!marquee.isAnimating)
 }
