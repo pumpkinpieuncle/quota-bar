@@ -140,7 +140,14 @@ APPLESCRIPT
 
 sync
 rm -rf "$mount_dir/.fseventsd" "$mount_dir/.Trashes"
-/usr/bin/hdiutil detach "$mounted_device" -quiet
+if ! /usr/bin/hdiutil detach "$mounted_device" -quiet; then
+    echo "DMG is still busy; retrying detach..." >&2
+    sleep 2
+    if ! /usr/bin/hdiutil detach "$mounted_device" -quiet; then
+        echo "DMG is still busy; force-detaching temporary image..." >&2
+        /usr/bin/hdiutil detach "$mounted_device" -force -quiet
+    fi
+fi
 mounted_device=""
 /usr/bin/hdiutil convert "$rw_dmg" \
     -format UDZO \
