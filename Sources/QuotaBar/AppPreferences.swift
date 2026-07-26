@@ -17,12 +17,22 @@ final class AppPreferences: ObservableObject {
         }
     }
 
+    @Published var quotaWindow: QuotaWindowPreference {
+        didSet { defaults.set(quotaWindow.rawValue, forKey: Keys.quotaWindow) }
+    }
+
+    @Published var panelLayout: PanelLayoutMode {
+        didSet { defaults.set(panelLayout.rawValue, forKey: Keys.panelLayout) }
+    }
+
     private let defaults: UserDefaults
 
     private enum Keys {
         static let language = "appLanguage"
         static let refreshMode = "refreshMode"
         static let customRefreshSeconds = "customRefreshSeconds"
+        static let quotaWindow = "quotaWindow"
+        static let panelLayout = "panelLayout"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -52,5 +62,23 @@ final class AppPreferences: ObservableObject {
         customRefreshSeconds = savedSeconds == 0
             ? 120
             : min(max(savedSeconds, 10), 3_600)
+
+        if
+            let raw = defaults.string(forKey: Keys.quotaWindow),
+            let saved = QuotaWindowPreference(rawValue: raw)
+        {
+            quotaWindow = saved
+        } else {
+            quotaWindow = .fiveHour
+        }
+
+        if
+            let raw = defaults.string(forKey: Keys.panelLayout),
+            let saved = PanelLayoutMode(rawValue: raw)
+        {
+            panelLayout = saved
+        } else {
+            panelLayout = .standard
+        }
     }
 }

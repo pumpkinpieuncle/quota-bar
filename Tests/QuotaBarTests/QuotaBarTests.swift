@@ -113,3 +113,39 @@ import Testing
     #expect(english.limits[0].label == "5 hours")
     #expect(english.limits[1].label == "7 days")
 }
+
+@Test func menuBarShowsAllProviderQuotas() {
+    let snapshots = ProviderID.allCases.enumerated().map { index, provider in
+        ProviderSnapshot(
+            id: provider,
+            activity: .idle,
+            limits: [
+                LimitWindow(
+                    id: "five-hour",
+                    label: "5 小时",
+                    remainingPercent: Double([31, 42, 53][index]),
+                    resetAt: nil
+                ),
+                LimitWindow(
+                    id: "weekly",
+                    label: "7 天",
+                    remainingPercent: Double([81, 7, 0][index]),
+                    resetAt: nil
+                )
+            ],
+            detail: "",
+            source: "",
+            lastUpdated: Date(),
+            setupAvailable: false,
+            isInstalled: true
+        )
+    }
+    #expect(
+        MenuBarSummary.text(snapshots: snapshots, preference: .weekly)
+            == "CX 81%  CL 7%  KM 0%"
+    )
+    #expect(
+        MenuBarSummary.text(snapshots: snapshots, preference: .fiveHour)
+            == "CX 31%  CL 42%  KM 53%"
+    )
+}

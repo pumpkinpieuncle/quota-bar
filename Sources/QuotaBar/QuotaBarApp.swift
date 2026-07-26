@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 
 final class FloatingPanel: NSPanel {
@@ -10,10 +11,19 @@ final class FloatingPanel: NSPanel {
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let model = AppModel()
     private var panel: FloatingPanel?
+    private var hostingView: NSHostingView<ContentView>?
     private var statusItem: NSStatusItem?
+    private var statusMenu: NSMenu?
     private var toggleMenuItem: NSMenuItem?
     private var refreshMenuItem: NSMenuItem?
     private var quitMenuItem: NSMenuItem?
+    private var quotaWindowMenuItem: NSMenuItem?
+    private var fiveHourMenuItem: NSMenuItem?
+    private var weeklyMenuItem: NSMenuItem?
+    private var quotaMenuItems: [ProviderID: NSMenuItem] = [:]
+    private var snapshotObservation: AnyCancellable?
+    private var quotaWindowObservation: AnyCancellable?
+    private var panelLayoutObservation: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -27,7 +37,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func makePanel() {
-        let size = NSSize(width: 600, height: 286)
+        let size = NSSize(
+            width: 600,
+            height: model.preferences.panelLayout.panelHeight
+        )
         let panel = FloatingPanel(
             contentRect: NSRect(origin: .zero, size: size),
             styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel],
@@ -48,7 +61,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         panel.standardWindowButton(.closeButton)?.isHidden = true
         panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
         panel.standardWindowButton(.zoomButton)?.isHidden = true
-        panel.contentView = NSHostingView(rootView: ContentView(model: model))
+        let hostingView = NSHostingView(
+            rootView: ContentView(model: model, onHideToMenuBar: { [weak self] in
+                self?.collapsePanel()
+            })
+        )
+        hostingView.wantsLayer = true
+        hostingView.layer?.cornerRadius = 24
+        hostingView.layer?.cornerCurve = .continuous
+        hostingView.layer?.masksToBounds = true
+        panel.contentView = hostingView
+        self.hostingView = hostingView
 
         if let screen = NSScreen.main {
             let visible = screen.visibleFrame
@@ -62,15 +85,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         panel.orderFrontRegardless()
         self.panel = panel
+
+        panelLayoutObservation = model.preferences.$panelLayout
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] mode in
+                self?.resizePanel(for: mode)
+            }
     }
 
     private func makeStatusItem() {
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
             button.image = NSImage(
                 systemSymbolName: "gauge.with.dots.needle.67percent",
                 accessibilityDescription: "Quota Bar"
             )
+            button.imagePosition = .imageLeading
+            button.font = .monospacedDigitSystemFont(ofSize: 11, weight: .semibold)
+            button.target = self
+            button.action = #selector(statusItemClicked(_:))
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
 
         let menu = NSMenu()
@@ -82,6 +117,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         )
         toggle.target = self
         menu.addItem(toggle)
+        menu.addItem(.separator())
+
+        for provider in ProviderID.allCases {
+            let quota = NSMenuItem(title: provider.title, action: nil, keyEquivalent: "")
+            quota.isEnabled = false
+            menu.addItem(quota)
+            quotaMenuItems[provider] = quota
+        }
+        menu.addItem(.separator())
+
+        let windowMenu = NSMenu()
+        let fiveHour = NSMenuItem(
+            title: "",
+            action: #selector(showFiveHourQuota),
+            keyEquivalent: ""
+        )
+        fiveHour.target = self
+        windowMenu.addItem(fiveHour)
+        let weekly = NSMenuItem(
+            title: "",
+            action: #selector(showWeeklyQuota),
+            keyEquivalent: ""
+        )
+        weekly.target = self
+        windowMenu.addItem(weekly)
+        let windowParent = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        windowParent.submenu = windowMenu
+        menu.addItem(windowParent)
+        quotaWindowMenuItem = windowParent
+        fiveHourMenuItem = fiveHour
+        weeklyMenuItem = weekly
 
         let refresh = NSMenuItem(
             title: "",
@@ -99,12 +165,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         )
         quit.target = self
         menu.addItem(quit)
-        item.menu = menu
+        statusMenu = menu
         toggleMenuItem = toggle
         refreshMenuItem = refresh
         quitMenuItem = quit
         updateMenuTitles()
         statusItem = item
+        updateStatusItem(snapshots: model.snapshots)
+        snapshotObservation = model.$snapshots
+            .receive(on: RunLoop.main)
+            .sink { [weak self] snapshots in
+                self?.updateStatusItem(snapshots: snapshots)
+            }
+        quotaWindowObservation = model.preferences.$quotaWindow
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.updateStatusItem(snapshots: self.model.snapshots)
+                self.updateMenuTitles()
+            }
     }
 
     func menuWillOpen(_ menu: NSMenu) {
@@ -113,18 +193,107 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func updateMenuTitles() {
         let language = model.language
-        toggleMenuItem?.title = language.text("显示 / 隐藏浮窗", "Show / hide panel")
+        toggleMenuItem?.title = panel?.isVisible == true
+            ? language.text("收起到菜单栏", "Collapse to menu bar")
+            : language.text("显示浮窗", "Show panel")
         refreshMenuItem?.title = language.text("立即刷新", "Refresh now")
         quitMenuItem?.title = language.text("退出 Quota Bar", "Quit Quota Bar")
+        fiveHourMenuItem?.title = language.text("显示 5 小时额度", "Show 5-hour quota")
+        weeklyMenuItem?.title = language.text("显示周额度", "Show weekly quota")
+        fiveHourMenuItem?.state = model.preferences.quotaWindow == .fiveHour ? .on : .off
+        weeklyMenuItem?.state = model.preferences.quotaWindow == .weekly ? .on : .off
+        quotaWindowMenuItem?.title = language.text(
+            "顶部栏额度",
+            "Menu bar quota"
+        )
+        updateQuotaMenuItems(snapshots: model.snapshots)
+    }
+
+    private func updateStatusItem(snapshots: [ProviderSnapshot]) {
+        let summary = MenuBarSummary.text(
+            snapshots: snapshots,
+            preference: model.preferences.quotaWindow
+        )
+        statusItem?.button?.title = summary
+        statusItem?.button?.toolTip = MenuBarSummary.accessibilityText(
+            snapshots: snapshots,
+            language: model.language,
+            preference: model.preferences.quotaWindow
+        )
+        updateQuotaMenuItems(snapshots: snapshots)
+    }
+
+    private func updateQuotaMenuItems(snapshots: [ProviderSnapshot]) {
+        for provider in ProviderID.allCases {
+            guard let item = quotaMenuItems[provider] else { continue }
+            let snapshot = snapshots.first { $0.id == provider }
+            let quota = snapshot.flatMap {
+                QuotaWindowSelector.limit(
+                    in: $0.limits,
+                    preference: model.preferences.quotaWindow
+                )
+            }.map {
+                "\(Int($0.clampedRemaining.rounded()))%"
+            } ?? "—"
+            let state = snapshot?.activity.label(language: model.language)
+                ?? ActivityState.offline.label(language: model.language)
+            item.title = "\(provider.title)  \(quota)  ·  \(state)"
+        }
     }
 
     @objc private func togglePanel() {
         guard let panel else { return }
         if panel.isVisible {
-            panel.orderOut(nil)
+            collapsePanel()
         } else {
             panel.orderFrontRegardless()
+            updateMenuTitles()
         }
+    }
+
+    @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
+        if NSApp.currentEvent?.type == .rightMouseUp {
+            updateMenuTitles()
+            statusMenu?.popUp(
+                positioning: nil,
+                at: NSPoint(x: 0, y: sender.bounds.minY - 4),
+                in: sender
+            )
+        } else {
+            panel?.orderFrontRegardless()
+            updateMenuTitles()
+        }
+    }
+
+    private func collapsePanel() {
+        panel?.orderOut(nil)
+        updateMenuTitles()
+    }
+
+    private func resizePanel(for mode: PanelLayoutMode) {
+        guard let panel else { return }
+        let oldFrame = panel.frame
+        let newSize = NSSize(width: 600, height: mode.panelHeight)
+        let origin = NSPoint(
+            x: oldFrame.maxX - newSize.width,
+            y: oldFrame.maxY - newSize.height
+        )
+        hostingView?.layer?.cornerRadius = mode == .compact ? 20 : 24
+        panel.setFrame(
+            NSRect(origin: origin, size: newSize),
+            display: true,
+            animate: true
+        )
+        panel.invalidateShadow()
+        updateMenuTitles()
+    }
+
+    @objc private func showFiveHourQuota() {
+        model.preferences.quotaWindow = .fiveHour
+    }
+
+    @objc private func showWeeklyQuota() {
+        model.preferences.quotaWindow = .weekly
     }
 
     @objc private func refreshNow() {
@@ -133,6 +302,59 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func quit() {
         NSApp.terminate(nil)
+    }
+}
+
+enum MenuBarSummary {
+    static func text(
+        snapshots: [ProviderSnapshot],
+        preference: QuotaWindowPreference
+    ) -> String {
+        let values = ProviderID.allCases.map { provider in
+            let quota = snapshots
+                .first { $0.id == provider }
+                .flatMap {
+                    QuotaWindowSelector.limit(
+                        in: $0.limits,
+                        preference: preference
+                    )
+                }
+                .map { "\(Int($0.clampedRemaining.rounded()))%" } ?? "—"
+            return "\(abbreviation(provider)) \(quota)"
+        }
+        return values.joined(separator: "  ")
+    }
+
+    static func accessibilityText(
+        snapshots: [ProviderSnapshot],
+        language: AppLanguage,
+        preference: QuotaWindowPreference
+    ) -> String {
+        let values = ProviderID.allCases.map { provider in
+            let quota = snapshots
+                .first { $0.id == provider }
+                .flatMap {
+                    QuotaWindowSelector.limit(
+                        in: $0.limits,
+                        preference: preference
+                    )
+                }
+                .map { "\(Int($0.clampedRemaining.rounded()))%" }
+                ?? language.text("未知", "unknown")
+            return "\(provider.title) \(quota)"
+        }
+        return "Quota Bar · "
+            + preference.label(language: language)
+            + " · "
+            + values.joined(separator: ", ")
+    }
+
+    private static func abbreviation(_ provider: ProviderID) -> String {
+        switch provider {
+        case .codex: "CX"
+        case .claude: "CL"
+        case .kimi: "KM"
+        }
     }
 }
 

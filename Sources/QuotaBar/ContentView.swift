@@ -5,9 +5,11 @@ struct ContentView: View {
     @ObservedObject var model: AppModel
     @ObservedObject private var preferences: AppPreferences
     @State private var showSettings = false
+    let onHideToMenuBar: () -> Void
 
-    init(model: AppModel) {
+    init(model: AppModel, onHideToMenuBar: @escaping () -> Void = {}) {
         self.model = model
+        self.onHideToMenuBar = onHideToMenuBar
         _preferences = ObservedObject(wrappedValue: model.preferences)
     }
 
@@ -24,23 +26,43 @@ struct ContentView: View {
                 endPoint: .bottomTrailing
             )
 
-            VStack(spacing: 12) {
-                header
-                cards
-                footer
+            if preferences.panelLayout == .compact {
+                compactBody
+                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            } else {
+                VStack(spacing: 12) {
+                    header
+                    cards
+                    footer
+                }
+                .padding(16)
             }
-            .padding(16)
 
-            if showSettings {
+            if showSettings, preferences.panelLayout == .standard {
                 SettingsOverlay(model: model, isPresented: $showSettings)
                     .padding(12)
                     .transition(.scale(scale: 0.96).combined(with: .opacity))
             }
         }
-        .frame(width: 600, height: 286)
+        .frame(width: 600, height: preferences.panelLayout.panelHeight)
+        .clipShape(RoundedRectangle(cornerRadius: panelCornerRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: panelCornerRadius, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.18),
+                            Color.white.opacity(0.035)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.8
+                )
+        }
         .preferredColorScheme(.dark)
         .overlay(alignment: .bottom) {
-            if let notice = model.notice {
+            if let notice = model.notice, preferences.panelLayout == .standard {
                 NoticeView(text: notice) {
                     model.dismissNotice()
                 }
@@ -50,10 +72,24 @@ struct ContentView: View {
             }
         }
         .animation(.spring(response: 0.28, dampingFraction: 0.86), value: model.notice)
+        .animation(
+            .spring(response: 0.3, dampingFraction: 0.88),
+            value: preferences.panelLayout
+        )
+    }
+
+    private var panelCornerRadius: Double {
+        preferences.panelLayout == .compact ? 20 : 24
     }
 
     private var header: some View {
         HStack(spacing: 10) {
+            TrafficLights(
+                onClose: onHideToMenuBar,
+                onMinimize: { preferences.panelLayout = .compact },
+                onZoom: { preferences.panelLayout = .standard }
+            )
+
             ZStack {
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .fill(Color.white.opacity(0.1))
@@ -86,6 +122,19 @@ struct ContentView: View {
             .padding(.horizontal, 9)
             .padding(.vertical, 6)
             .background(Color.white.opacity(0.065), in: Capsule())
+
+            Button {
+                preferences.panelLayout = .compact
+            } label: {
+                Image(systemName: "chevron.up")
+                    .font(.system(size: 11, weight: .bold))
+                    .frame(width: 30, height: 30)
+            }
+            .buttonStyle(HeaderButtonStyle())
+            .help(preferences.language.text(
+                "收成单行",
+                "Collapse to one line"
+            ))
 
             Button {
                 showSettings.toggle()
@@ -146,6 +195,149 @@ struct ContentView: View {
         }
         .foregroundStyle(.white.opacity(0.4))
         .padding(.horizontal, 2)
+    }
+
+    private var compactBody: some View {
+        HStack(spacing: 8) {
+            TrafficLights(
+                onClose: onHideToMenuBar,
+                onMinimize: {},
+                onZoom: { preferences.panelLayout = .standard }
+            )
+
+            ForEach(model.snapshots) { snapshot in
+                compactProvider(snapshot)
+            }
+
+            Button {
+                preferences.panelLayout = .standard
+            } label: {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .bold))
+                    .frame(width: 28, height: 30)
+            }
+            .buttonStyle(HeaderButtonStyle())
+            .help(preferences.language.text("展开标准视图", "Expand standard view"))
+
+            Button {
+                Task { await model.refresh(forceRemote: true) }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 10, weight: .semibold))
+                    .frame(width: 28, height: 30)
+            }
+            .buttonStyle(HeaderButtonStyle())
+            .help(preferences.language.text("立即刷新", "Refresh now"))
+        }
+        .padding(.horizontal, 10)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func compactProvider(_ snapshot: ProviderSnapshot) -> some View {
+        let limit = QuotaWindowSelector.limit(
+            in: snapshot.limits,
+            preference: preferences.quotaWindow
+        )
+        let quota = limit.map {
+            "\(Int($0.clampedRemaining.rounded()))%"
+        } ?? "—"
+        return HStack(spacing: 5) {
+            Circle()
+                .fill(compactActivityColor(snapshot.activity))
+                .frame(width: 5, height: 5)
+            Text(snapshot.id.title)
+                .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.62))
+                .lineLimit(1)
+            Spacer(minLength: 0)
+            Text(quota)
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.94))
+        }
+        .padding(.horizontal, 9)
+        .frame(maxWidth: .infinity, minHeight: 38, maxHeight: 38)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.white.opacity(0.055))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.white.opacity(0.085), lineWidth: 0.7)
+                }
+        )
+        .help(
+            "\(snapshot.id.title) · "
+                + snapshot.activity.label(language: preferences.language)
+        )
+    }
+
+    private func compactActivityColor(_ activity: ActivityState) -> Color {
+        switch activity {
+        case .waitingApproval: Color.orange
+        case .working: Color(red: 0.43, green: 0.92, blue: 0.66)
+        case .thinking: Color(red: 0.48, green: 0.7, blue: 1)
+        case .needsAttention: Color.orange
+        case .idle: Color.white.opacity(0.35)
+        case .offline: Color.white.opacity(0.2)
+        }
+    }
+}
+
+private struct TrafficLights: View {
+    let onClose: () -> Void
+    let onMinimize: () -> Void
+    let onZoom: () -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            TrafficLightButton(
+                color: Color(red: 1, green: 0.37, blue: 0.34),
+                symbol: "xmark",
+                help: "Hide",
+                action: onClose
+            )
+            TrafficLightButton(
+                color: Color(red: 1, green: 0.74, blue: 0.23),
+                symbol: "minus",
+                help: "One line",
+                action: onMinimize
+            )
+            TrafficLightButton(
+                color: Color(red: 0.2, green: 0.78, blue: 0.35),
+                symbol: "arrow.up.left.and.arrow.down.right",
+                help: "Standard",
+                action: onZoom
+            )
+        }
+        .frame(width: 48)
+    }
+}
+
+private struct TrafficLightButton: View {
+    let color: Color
+    let symbol: String
+    let help: String
+    let action: () -> Void
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Circle()
+                .fill(color)
+                .overlay {
+                    if isHovering {
+                        Image(systemName: symbol)
+                            .font(.system(size: 6, weight: .black))
+                            .foregroundStyle(Color.black.opacity(0.58))
+                    }
+                }
+                .frame(width: 12, height: 12)
+                .overlay {
+                    Circle().stroke(Color.black.opacity(0.18), lineWidth: 0.5)
+                }
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
+        .help(help)
     }
 }
 
@@ -281,10 +473,10 @@ private struct ProviderCard: View {
         .padding(12)
         .frame(maxWidth: .infinity, minHeight: 174, maxHeight: 174)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(Color.white.opacity(0.055))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .stroke(
                             LinearGradient(
                                 colors: [Color.white.opacity(0.13), Color.white.opacity(0.035)],
@@ -429,6 +621,49 @@ private struct SettingsOverlay: View {
                 }
             }
 
+            settingRow(
+                title: language.text("摘要显示", "Summary display"),
+                detail: language.text(
+                    "用于菜单栏和单行模式",
+                    "Used by the menu bar and one-line mode"
+                )
+            ) {
+                HStack(spacing: 8) {
+                    VStack(spacing: 3) {
+                        Text(language.text("额度", "Quota"))
+                            .font(.system(size: 8.5, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.42))
+                        Picker("", selection: $preferences.quotaWindow) {
+                            ForEach(QuotaWindowPreference.allCases) { window in
+                                Text(window.label(language: language)).tag(window)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.segmented)
+                        .frame(width: 122)
+                    }
+
+                    VStack(spacing: 3) {
+                        Text(language.text("浮窗", "Panel"))
+                            .font(.system(size: 8.5, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.42))
+                        Picker("", selection: $preferences.panelLayout) {
+                            ForEach(PanelLayoutMode.allCases) { mode in
+                                Text(mode.label(language: language)).tag(mode)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.segmented)
+                        .frame(width: 112)
+                        .onChange(of: preferences.panelLayout) { _, mode in
+                            if mode == .compact {
+                                isPresented = false
+                            }
+                        }
+                    }
+                }
+            }
+
             HStack(spacing: 7) {
                 Image(systemName: "leaf.fill")
                     .foregroundStyle(Color(red: 0.43, green: 0.92, blue: 0.66))
@@ -444,10 +679,10 @@ private struct SettingsOverlay: View {
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(Color(red: 0.075, green: 0.085, blue: 0.105).opacity(0.97))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
                 }
         )

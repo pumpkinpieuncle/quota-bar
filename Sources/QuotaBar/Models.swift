@@ -65,6 +65,70 @@ struct LimitWindow: Identifiable, Equatable, Sendable {
     }
 }
 
+enum QuotaWindowPreference: String, CaseIterable, Identifiable, Sendable {
+    case fiveHour
+    case weekly
+
+    var id: String { rawValue }
+
+    func label(language: AppLanguage) -> String {
+        switch self {
+        case .fiveHour: language.text("5 小时", "5 hours")
+        case .weekly: language.text("周额度", "Weekly")
+        }
+    }
+
+    func compactLabel(language: AppLanguage) -> String {
+        switch self {
+        case .fiveHour: language.text("5时", "5h")
+        case .weekly: language.text("周", "7d")
+        }
+    }
+}
+
+enum PanelLayoutMode: String, CaseIterable, Identifiable, Sendable {
+    case standard
+    case compact
+
+    var id: String { rawValue }
+
+    func label(language: AppLanguage) -> String {
+        switch self {
+        case .standard: language.text("标准", "Standard")
+        case .compact: language.text("单行", "One line")
+        }
+    }
+
+    var panelHeight: Double {
+        switch self {
+        case .standard: 286
+        case .compact: 72
+        }
+    }
+}
+
+enum QuotaWindowSelector {
+    static func limit(
+        in limits: [LimitWindow],
+        preference: QuotaWindowPreference
+    ) -> LimitWindow? {
+        limits.first { limit in
+            let label = limit.label.lowercased()
+            switch preference {
+            case .fiveHour:
+                return label.contains("5 小时")
+                    || label.contains("5 hour")
+                    || label.contains("5h")
+            case .weekly:
+                return label.contains("7 天")
+                    || label.contains("7 day")
+                    || label.contains("week")
+                    || label.contains("weekly")
+            }
+        }
+    }
+}
+
 struct ProviderSnapshot: Identifiable, Equatable, Sendable {
     let id: ProviderID
     var activity: ActivityState
