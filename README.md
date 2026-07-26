@@ -53,6 +53,9 @@ Quota Bar **不会为了显示状态而消耗 Codex、Claude 或 Kimi 的模型�
 3. 向下滚动到“安全性”，找到 Quota Bar 的提示并点击“仍要打开”；
 4. 在再次出现的确认框中点击“打开”，必要时输入 Mac 登录密码。
 
+<img width="690" height="191" alt="image" src="https://github.com/user-attachments/assets/52544439-5706-405f-856c-0a070a5350be" />
+
+
 macOS 会把这个版本保存为安全例外，之后可以正常双击打开。此操作只应在确认安装包来自本仓库且校验值一致时进行。详见 [Apple 官方说明](https://support.apple.com/102445)。
 
 也可以从源码构建：
