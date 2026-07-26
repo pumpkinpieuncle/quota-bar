@@ -36,6 +36,12 @@ import Testing
         hasActiveProvider: false,
         customSeconds: 1
     ) == 10)
+    #expect(RefreshMode.oneHour.interval(hasActiveProvider: false) == 3_600)
+    #expect(RefreshMode.sixHours.interval(hasActiveProvider: false) == 21_600)
+    #expect(RefreshMode.custom.interval(
+        hasActiveProvider: false,
+        customSeconds: 100_000
+    ) == 86_400)
 }
 
 @Test func readsClaudeDesktopPlanUsageHistory() throws {
@@ -116,7 +122,7 @@ import Testing
 
 @Test func menuBarShowsAllProviderQuotas() {
     let providers: [ProviderID] = [.codex, .claude, .kimi]
-    let snapshots = providers.enumerated().map { index, provider in
+    var snapshots = providers.enumerated().map { index, provider in
         ProviderSnapshot(
             id: provider,
             activity: .idle,
@@ -141,6 +147,9 @@ import Testing
             isInstalled: true
         )
     }
+    snapshots[2].balances = [
+        AccountBalance(currency: "CNY", total: 15, granted: 15, toppedUp: 0)
+    ]
     #expect(
         MenuBarSummary.text(
             snapshots: snapshots,
@@ -196,6 +205,25 @@ import Testing
     )
 }
 
+@Test func readsKimiVoucherAndCashBalance() throws {
+    let payload = """
+    {
+      "code": 0,
+      "data": {
+        "available_balance": 49.58894,
+        "voucher_balance": 46.58893,
+        "cash_balance": 3.00001
+      },
+      "status": true
+    }
+    """
+    let result = try KimiBalanceClient.parseResponse(Data(payload.utf8))
+    #expect(result.balance.currency == "CNY")
+    #expect(result.balance.total == Decimal(string: "49.58894"))
+    #expect(result.balance.granted == Decimal(string: "46.58893"))
+    #expect(result.balance.toppedUp == Decimal(string: "3.00001"))
+}
+
 @MainActor
 @Test func providerVisibilityAndOrderAreConfigurable() throws {
     let suite = "QuotaBarTests.\(UUID().uuidString)"
@@ -215,4 +243,9 @@ import Testing
     preferences.setProvider(.kimi, hidden: true)
     preferences.setProvider(.deepseek, hidden: true)
     #expect(preferences.visibleProviderOrder == [.deepseek])
+
+    preferences.setProvider(.kimi, paused: true)
+    #expect(preferences.pausedProviders == [.kimi])
+    preferences.setProvider(.kimi, paused: false)
+    #expect(preferences.pausedProviders.isEmpty)
 }

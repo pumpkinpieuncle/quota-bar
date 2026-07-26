@@ -5,6 +5,23 @@ import SwiftUI
 final class FloatingPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+
+    override func constrainFrameRect(
+        _ frameRect: NSRect,
+        to screen: NSScreen?
+    ) -> NSRect {
+        guard let bounds = screen?.visibleFrame else { return frameRect }
+        var frame = frameRect
+        frame.origin.x = min(
+            max(frame.origin.x, bounds.minX),
+            max(bounds.minX, bounds.maxX - frame.width)
+        )
+        frame.origin.y = min(
+            max(frame.origin.y, bounds.minY),
+            max(bounds.minY, bounds.maxY - frame.height)
+        )
+        return frame
+    }
 }
 
 @MainActor
@@ -81,7 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let visible = screen.visibleFrame
             let origin = NSPoint(
                 x: visible.maxX - size.width - 24,
-                y: visible.maxY - size.height - 24
+                y: visible.maxY - size.height
             )
             panel.setFrameOrigin(origin)
         } else {
@@ -385,13 +402,19 @@ enum MenuBarSummary {
         snapshot: ProviderSnapshot,
         preference: QuotaWindowPreference
     ) -> String? {
-        if let balance = snapshot.balances.first {
+        if
+            let balance = snapshot.balances.first,
+            snapshot.id == .deepseek || snapshot.limits.isEmpty
+        {
             return balance.compactText
         }
-        return QuotaWindowSelector.limit(
+        if let limit = QuotaWindowSelector.limit(
             in: snapshot.limits,
             preference: preference
-        ).map { "\(Int($0.clampedRemaining.rounded()))%" }
+        ) {
+            return "\(Int(limit.clampedRemaining.rounded()))%"
+        }
+        return snapshot.balances.first?.compactText
     }
 }
 

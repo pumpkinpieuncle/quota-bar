@@ -11,11 +11,13 @@ final class AppModel: ObservableObject {
     @Published var notice: String?
     @Published var lastRefresh = Date()
     @Published var deepSeekKeyConfigured = DeepSeekCredentialStore.load() != nil
+    @Published var kimiAPIKeyConfigured = KimiAPICredentialStore.load() != nil
 
     let preferences = AppPreferences()
 
     private let codexClient = CodexUsageClient()
     private let deepSeekClient = DeepSeekBalanceClient()
+    private let kimiBalanceClient = KimiBalanceClient()
     private let kimiClient = KimiUsageClient()
     private var scheduledRefresh: Task<Void, Never>?
 
@@ -47,11 +49,15 @@ final class AppModel: ObservableObject {
         Task { await refresh(forceRemote: true) }
     }
 
-    func refresh(forceRemote: Bool) async {
+    func refresh(
+        forceRemote: Bool,
+        preserveRemoteDataOnFailure: Bool = false
+    ) async {
         guard !isRefreshing else { return }
         scheduledRefresh?.cancel()
         isRefreshing = true
         let currentLanguage = preferences.language
+        let previousSnapshots = snapshots
 
         let bundle = await Task.detached(priority: .utility) {
             LocalCollectors.collect(language: currentLanguage)
@@ -80,9 +86,30 @@ final class AppModel: ObservableObject {
             )
         )
 
+        for provider in preferences.pausedProviders {
+            guard
+                let currentIndex = merged.firstIndex(where: { $0.id == provider }),
+                let previous = previousSnapshots.first(where: { $0.id == provider })
+            else {
+                continue
+            }
+            merged[currentIndex].limits = previous.limits
+            merged[currentIndex].balances = previous.balances
+            merged[currentIndex].lastUpdated = previous.lastUpdated
+            merged[currentIndex].source = previous.source
+            if provider == .deepseek {
+                merged[currentIndex].activity = previous.activity
+            }
+            merged[currentIndex].detail = currentLanguage.text(
+                "额度刷新已暂停",
+                "Quota refresh paused"
+            )
+        }
+
         if
             bundle.codex.isInstalled,
-            !preferences.hiddenProviders.contains(.codex)
+            !preferences.hiddenProviders.contains(.codex),
+            !preferences.pausedProviders.contains(.codex)
         {
             do {
                 let usage = try await codexClient.fetchIfNeeded(
@@ -113,7 +140,8 @@ final class AppModel: ObservableObject {
 
         if
             bundle.kimi.isInstalled,
-            !preferences.hiddenProviders.contains(.kimi)
+            !preferences.hiddenProviders.contains(.kimi),
+            !preferences.pausedProviders.contains(.kimi)
         {
             do {
                 let kimiIsActive = bundle.kimi.activity.isActive
@@ -143,8 +171,37 @@ final class AppModel: ObservableObject {
         }
 
         if
+            kimiAPIKeyConfigured,
+            !preferences.hiddenProviders.contains(.kimi),
+            !preferences.pausedProviders.contains(.kimi)
+        {
+            do {
+                let result = try await kimiBalanceClient.fetchIfNeeded(force: forceRemote)
+                if let index = merged.firstIndex(where: { $0.id == .kimi }) {
+                    merged[index].balances = [result.balance]
+                    merged[index].lastUpdated = max(
+                        merged[index].lastUpdated ?? .distantPast,
+                        result.fetchedAt
+                    )
+                    merged[index].source = currentLanguage.text(
+                        "Kimi Code 额度 + Kimi 开放平台余额",
+                        "Kimi Code quota + Kimi Open Platform balance"
+                    )
+                }
+            } catch {
+                if let index = merged.firstIndex(where: { $0.id == .kimi }) {
+                    merged[index].detail = kimiBalanceError(
+                        error,
+                        language: currentLanguage
+                    )
+                }
+            }
+        }
+
+        if
             deepSeekKeyConfigured,
-            !preferences.hiddenProviders.contains(.deepseek)
+            !preferences.hiddenProviders.contains(.deepseek),
+            !preferences.pausedProviders.contains(.deepseek)
         {
             do {
                 let balance = try await deepSeekClient.fetchIfNeeded(force: forceRemote)
@@ -164,8 +221,26 @@ final class AppModel: ObservableObject {
                 }
             } catch {
                 if let index = merged.firstIndex(where: { $0.id == .deepseek }) {
-                    merged[index].activity = .needsAttention
-                    merged[index].detail = deepSeekError(error, language: currentLanguage)
+                    if
+                        preserveRemoteDataOnFailure,
+                        let previous = previousSnapshots.first(where: {
+                            $0.id == .deepseek && !$0.balances.isEmpty
+                        })
+                    {
+                        merged[index].balances = previous.balances
+                        merged[index].lastUpdated = previous.lastUpdated
+                        merged[index].activity = previous.activity
+                        merged[index].detail = currentLanguage.text(
+                            "自动刷新暂时失败，保留上次余额",
+                            "Automatic refresh failed; showing the last balance"
+                        )
+                    } else {
+                        merged[index].activity = .needsAttention
+                        merged[index].detail = deepSeekError(
+                            error,
+                            language: currentLanguage
+                        )
+                    }
                 }
             }
         }
@@ -232,6 +307,37 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func saveKimiAPIKey(_ key: String) async {
+        do {
+            let normalized = KimiAPICredentialStore.normalizedAPIKey(key)
+            _ = try await kimiBalanceClient.validate(apiKey: normalized)
+            try KimiAPICredentialStore.save(normalized)
+            kimiAPIKeyConfigured = true
+            preferences.setProvider(.kimi, hidden: false)
+            notice = language.text(
+                "Kimi 开放平台 API Key 验证成功，赠送额度已同步。",
+                "Kimi Open Platform API key verified and voucher balance synced."
+            )
+            await refresh(forceRemote: false)
+        } catch {
+            notice = kimiBalanceError(error, language: language)
+        }
+    }
+
+    func removeKimiAPIKey() async {
+        do {
+            try KimiAPICredentialStore.delete()
+            kimiAPIKeyConfigured = false
+            notice = language.text(
+                "Kimi 开放平台 API Key 已从 macOS 钥匙串移除。",
+                "Kimi Open Platform API key was removed from macOS Keychain."
+            )
+            await refresh(forceRemote: false)
+        } catch {
+            notice = kimiBalanceError(error, language: language)
+        }
+    }
+
     private func scheduleNextRefresh() {
         scheduledRefresh?.cancel()
         let hasActiveProvider = snapshots.contains { $0.activity.isActive }
@@ -245,8 +351,16 @@ final class AppModel: ObservableObject {
         scheduledRefresh = Task { [weak self] in
             try? await Task.sleep(for: .seconds(interval))
             guard !Task.isCancelled else { return }
-            await self?.refresh(forceRemote: false)
+            await self?.scheduledRefreshDidFire()
         }
+    }
+
+    private func scheduledRefreshDidFire() async {
+        scheduledRefresh = nil
+        await refresh(
+            forceRemote: true,
+            preserveRemoteDataOnFailure: true
+        )
     }
 
     private func kimiError(_ error: Error, language: AppLanguage) -> String {
@@ -267,6 +381,39 @@ final class AppModel: ObservableObject {
             }
         }
         return language.text("Kimi 额度同步失败", "Kimi quota sync failed")
+    }
+
+    private func kimiBalanceError(_ error: Error, language: AppLanguage) -> String {
+        if let clientError = error as? KimiBalanceClient.ClientError {
+            switch clientError {
+            case .missingCredential:
+                return language.text(
+                    "请先配置 Kimi 开放平台 API Key",
+                    "Configure a Kimi Open Platform API key first"
+                )
+            case .invalidCredential:
+                return language.text(
+                    "Kimi 开放平台拒绝了该 Key（401）",
+                    "Kimi Open Platform rejected this key (401)"
+                )
+            case .http(let status):
+                return language.text(
+                    "Kimi 余额接口返回 HTTP \(status)",
+                    "Kimi balance endpoint returned HTTP \(status)"
+                )
+            case .keychain:
+                return language.text(
+                    "无法访问 Kimi API Key 钥匙串",
+                    "Could not access the Kimi API key in Keychain"
+                )
+            case .invalidResponse:
+                return language.text(
+                    "Kimi 返回了无法识别的余额数据",
+                    "Kimi returned unreadable balance data"
+                )
+            }
+        }
+        return language.text("Kimi 赠送额度同步失败", "Kimi voucher sync failed")
     }
 
     private func deepSeekError(_ error: Error, language: AppLanguage) -> String {

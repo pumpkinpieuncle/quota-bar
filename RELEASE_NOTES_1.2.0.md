@@ -8,5 +8,8 @@
 - Added persistent provider ordering and per-provider show/hide controls across cards, one-line mode, and the menu bar.
 - Simplified the floating panel header, improved contrast on light backgrounds, and made a menu-bar left click toggle the panel.
 - Menu-bar summaries now use full provider names; panel layout is controlled directly from the panel instead of Settings.
+- Added optional Kimi Open Platform voucher/cash balance display through its read-only balance endpoint.
+- Fixed scheduled refreshes cancelling themselves, which prevented DeepSeek from updating until a manual refresh.
+- Added per-provider refresh pause, longer presets, a 24-hour custom maximum, flush-top panel positioning, and a wider four-provider layout.
 - Added Developer ID hardened-runtime signing, Apple notarization, ticket stapling, and Gatekeeper verification to the release pipeline.
 - Kept task/activity detection local to each Mac for privacy. Quota is account-level; work state is device-level.

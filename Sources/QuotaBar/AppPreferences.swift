@@ -40,6 +40,15 @@ final class AppPreferences: ObservableObject {
         }
     }
 
+    @Published var pausedProviders: Set<ProviderID> {
+        didSet {
+            defaults.set(
+                pausedProviders.map(\.rawValue).sorted(),
+                forKey: Keys.pausedProviders
+            )
+        }
+    }
+
     private let defaults: UserDefaults
 
     private enum Keys {
@@ -50,6 +59,7 @@ final class AppPreferences: ObservableObject {
         static let panelLayout = "panelLayout"
         static let providerOrder = "providerOrder"
         static let hiddenProviders = "hiddenProviders"
+        static let pausedProviders = "pausedProviders"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -78,7 +88,7 @@ final class AppPreferences: ObservableObject {
         let savedSeconds = defaults.integer(forKey: Keys.customRefreshSeconds)
         customRefreshSeconds = savedSeconds == 0
             ? 120
-            : min(max(savedSeconds, 10), 3_600)
+            : min(max(savedSeconds, 10), 86_400)
 
         if
             let raw = defaults.string(forKey: Keys.quotaWindow),
@@ -111,6 +121,11 @@ final class AppPreferences: ObservableObject {
         } else {
             hiddenProviders = [.deepseek]
         }
+
+        pausedProviders = Set(
+            (defaults.stringArray(forKey: Keys.pausedProviders) ?? [])
+                .compactMap(ProviderID.init(rawValue:))
+        )
     }
 
     var visibleProviderOrder: [ProviderID] {
@@ -138,5 +153,15 @@ final class AppPreferences: ObservableObject {
         var next = providerOrder
         next.swapAt(oldIndex, oldIndex + offset)
         providerOrder = next
+    }
+
+    func setProvider(_ provider: ProviderID, paused: Bool) {
+        var next = pausedProviders
+        if paused {
+            next.insert(provider)
+        } else {
+            next.remove(provider)
+        }
+        pausedProviders = next
     }
 }

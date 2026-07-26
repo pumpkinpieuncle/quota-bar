@@ -132,8 +132,8 @@ enum PanelLayoutMode: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    func panelWidth(visibleProviderCount: Int) -> Double {
-        visibleProviderCount > 3 ? 720 : 600
+    func panelWidth(visibleProviderCount _: Int) -> Double {
+        840
     }
 }
 
@@ -230,6 +230,10 @@ enum RefreshMode: String, CaseIterable, Identifiable, Sendable {
     case thirtySeconds
     case oneMinute
     case fiveMinutes
+    case fifteenMinutes
+    case thirtyMinutes
+    case oneHour
+    case sixHours
     case custom
     case manual
 
@@ -245,6 +249,14 @@ enum RefreshMode: String, CaseIterable, Identifiable, Sendable {
             language.text("每 1 分钟", "Every minute")
         case .fiveMinutes:
             language.text("每 5 分钟", "Every 5 minutes")
+        case .fifteenMinutes:
+            language.text("每 15 分钟", "Every 15 minutes")
+        case .thirtyMinutes:
+            language.text("每 30 分钟", "Every 30 minutes")
+        case .oneHour:
+            language.text("每 1 小时", "Every hour")
+        case .sixHours:
+            language.text("每 6 小时", "Every 6 hours")
         case .custom:
             language.text("自定义", "Custom")
         case .manual:
@@ -261,7 +273,11 @@ enum RefreshMode: String, CaseIterable, Identifiable, Sendable {
         case .thirtySeconds: 30
         case .oneMinute: 60
         case .fiveMinutes: 300
-        case .custom: TimeInterval(min(max(customSeconds, 10), 3_600))
+        case .fifteenMinutes: 900
+        case .thirtyMinutes: 1_800
+        case .oneHour: 3_600
+        case .sixHours: 21_600
+        case .custom: TimeInterval(min(max(customSeconds, 10), 86_400))
         case .manual: nil
         }
     }
