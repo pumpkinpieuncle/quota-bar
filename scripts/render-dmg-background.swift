@@ -89,7 +89,7 @@ drawCentered(
     font: .systemFont(ofSize: 17, weight: .medium)
 )
 drawCentered(
-    "v1.2.4",
+    "v1.2.5",
     top: 335,
     font: .systemFont(ofSize: 13, weight: .medium),
     alpha: 0.82

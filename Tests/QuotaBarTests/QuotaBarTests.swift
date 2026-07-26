@@ -202,11 +202,12 @@ import Testing
 
 @MainActor
 @Test func menuBarMarqueeUsesContinuousLayerAnimation() {
+    let summary = "Codex 60%  Claude 71%  Kimi 0%  DeepSeek ¥5.47"
     let marquee = MenuBarMarqueeView(
         frame: NSRect(x: 0, y: 0, width: 155, height: 24)
     )
     marquee.update(
-        text: "Codex 60%  Claude 71%  Kimi 0%  DeepSeek ¥5.47",
+        text: summary,
         image: nil,
         font: .monospacedSystemFont(ofSize: 11, weight: .semibold)
     )
@@ -215,6 +216,8 @@ import Testing
     #expect(marquee.renderedText.contains("Claude 71%"))
     #expect(marquee.renderedText.contains("Kimi 0%"))
     #expect(marquee.renderedText.contains("DeepSeek ¥5.47"))
+    #expect(marquee.renderedText.components(separatedBy: summary).count - 1 == 2)
+    #expect(marquee.textContentWidth >= marquee.singleCycleWidth * 2 - 1)
     #expect(marquee.cycleDuration >= 6)
     #expect(marquee.cycleDuration <= 12)
     marquee.stop()

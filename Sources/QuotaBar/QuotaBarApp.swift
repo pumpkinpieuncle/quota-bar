@@ -29,9 +29,11 @@ final class FloatingPanel: NSPanel {
 final class MenuBarMarqueeView: NSView {
     private let iconView = NSImageView()
     private let textClipView = NSView()
-    private let label = NSTextField(labelWithString: "")
+    private let textLayer = CATextLayer()
     private var currentText = ""
     private(set) var cycleDuration: CFTimeInterval = 0
+    private(set) var singleCycleWidth: CGFloat = 0
+    private(set) var textContentWidth: CGFloat = 0
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -43,16 +45,10 @@ final class MenuBarMarqueeView: NSView {
         textClipView.layer?.masksToBounds = true
         addSubview(textClipView)
 
-        label.isBezeled = false
-        label.drawsBackground = false
-        label.isEditable = false
-        label.isSelectable = false
-        label.textColor = .labelColor
-        label.lineBreakMode = .byClipping
-        label.maximumNumberOfLines = 1
-        label.cell?.usesSingleLineMode = true
-        label.wantsLayer = true
-        textClipView.addSubview(label)
+        textLayer.alignmentMode = .left
+        textLayer.truncationMode = .none
+        textLayer.isWrapped = false
+        textClipView.layer?.addSublayer(textLayer)
     }
 
     required init?(coder: NSCoder) {
@@ -77,51 +73,67 @@ final class MenuBarMarqueeView: NSView {
             width: max(0, bounds.width - 28),
             height: bounds.height
         )
-        label.frame.origin.y = (textClipView.bounds.height - label.frame.height) / 2
+        textLayer.frame.origin.y = (textClipView.bounds.height - textLayer.frame.height) / 2
     }
 
     func update(text: String, image: NSImage?, font: NSFont) {
         iconView.image = image
-        guard currentText != text || label.layer?.animation(forKey: "marquee") == nil else {
+        guard currentText != text || textLayer.animation(forKey: "marquee") == nil else {
             return
         }
         currentText = text
         let cycle = text + "      "
-        label.font = font
-        label.stringValue = cycle + cycle
-        label.sizeToFit()
+        let repeatedText = cycle + cycle
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: NSColor.labelColor
+        ]
+        textLayer.contentsScale = window?.backingScaleFactor
+            ?? NSScreen.main?.backingScaleFactor
+            ?? 2
+        textLayer.string = NSAttributedString(
+            string: repeatedText,
+            attributes: attributes
+        )
         let cycleWidth = (cycle as NSString).size(
-            withAttributes: [.font: font]
+            withAttributes: attributes
         ).width
-        let completeWidth = ((cycle + cycle) as NSString).size(
-            withAttributes: [.font: font]
-        ).width
-        label.frame.size.width = ceil(completeWidth)
+        let completeSize = (repeatedText as NSString).size(
+            withAttributes: attributes
+        )
+        singleCycleWidth = ceil(cycleWidth)
+        textContentWidth = ceil(completeSize.width)
+        textLayer.frame = NSRect(
+            x: 0,
+            y: (textClipView.bounds.height - ceil(completeSize.height)) / 2,
+            width: textContentWidth,
+            height: ceil(completeSize.height)
+        )
         layoutSubtreeIfNeeded()
 
-        label.layer?.removeAllAnimations()
+        textLayer.removeAllAnimations()
         let animation = CABasicAnimation(keyPath: "transform.translation.x")
         animation.fromValue = 0
-        animation.toValue = -cycleWidth
+        animation.toValue = -singleCycleWidth
         animation.duration = min(12, max(6, Double(cycleWidth / 40)))
         cycleDuration = animation.duration
         animation.repeatCount = .infinity
         animation.timingFunction = CAMediaTimingFunction(name: .linear)
         animation.isRemovedOnCompletion = false
-        label.layer?.add(animation, forKey: "marquee")
+        textLayer.add(animation, forKey: "marquee")
     }
 
     func stop() {
-        label.layer?.removeAllAnimations()
+        textLayer.removeAllAnimations()
         currentText = ""
     }
 
     var isAnimating: Bool {
-        label.layer?.animation(forKey: "marquee") != nil
+        textLayer.animation(forKey: "marquee") != nil
     }
 
     var renderedText: String {
-        label.stringValue
+        (textLayer.string as? NSAttributedString)?.string ?? ""
     }
 }
 
