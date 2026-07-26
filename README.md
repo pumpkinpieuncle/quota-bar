@@ -8,8 +8,8 @@ A lightweight native macOS floating panel for Codex, Claude Code, Kimi Code quot
 
 ## 功能 / Features
 
-- 同屏展示各个服务的额度窗口、余额和重置时间；Kimi 可额外显示开放平台赠送与现金余额。
-- 顶部菜单栏用完整模型名称显示额度，并可切换 5 小时或周额度；小屏会自动轮播单个模型，避免整项被挤掉。
+- 同屏展示各个服务的额度窗口、余额和重置时间。
+- 顶部菜单栏可切换 5 小时或周额度；自动模式在宽屏显示完整摘要，小屏平滑循环滚动，也可强制选择完整或滚动方式。
 - 左键显示/收起浮窗，右键打开更多操作；若顶部栏被 macOS 遮挡，可按 `⌥⌘Q` 恢复浮窗，也可在“应用程序”中再次打开 Quota Bar。
 - 浮窗支持标准卡片和 72px 高的单行模式；红黄绿三色按钮分别用于隐藏、单行和恢复标准视图。
 - 模型管理支持排序、单独隐藏/显示；顶部栏、标准卡片和单行模式都会采用相同顺序。
@@ -29,7 +29,7 @@ Quota Bar **不会为了显示状态而消耗 Codex、Claude 或 Kimi 的模型�
 
 - Codex：通过官方 Codex app-server 的 `account/rateLimits/read` 读取当前登录账号的额度，并读取本地事件和任务进程判断工作状态。该接口不会生成模型回复。
 - Claude Desktop：只读它维护的本地 `plan-usage-history.json`；Claude Code 使用官方 status line 与 **command hooks**。不会使用 prompt/agent hooks，也不会给 Claude 发送测试提示词。
-- Kimi：读取本地会话事件；额度只通过 Kimi Code 官方 `/usages` HTTP 端点同步。可选的赠送/现金余额通过 Kimi 开放平台 `/v1/users/me/balance` 同步。两者都不是模型生成请求。
+- Kimi：读取本地会话事件；额度只通过 Kimi Code 官方 `/usages` HTTP 端点同步，不是模型生成请求。
 - DeepSeek：只请求官方 `GET /user/balance` 账户余额接口，不调用对话或补全模型；隐藏后停止远程同步。
 - 不包含模型 SDK、遥测或第三方分析。
 
@@ -98,7 +98,6 @@ Claude 官方仅对 Claude.ai Pro/Max 订阅用户提供 `rate_limits` 字段，
 
 - Claude/Kimi 的缓存位于 `~/.quotabar/`，权限为仅当前用户可读写。
 - Kimi OAuth token 只在内存中发送到 Kimi 官方域名，不写入日志或 Quota Bar 缓存。
-- 可选的 Kimi 开放平台 API Key 只保存在 macOS 钥匙串，用于只读赠送/现金余额查询。
 - DeepSeek API Key 只保存在 macOS 钥匙串中，并仅发送到 `api.deepseek.com/user/balance`。
 - Claude 配置首次修改前会备份为 `~/.claude/settings.json.quotabar-backup`。
 

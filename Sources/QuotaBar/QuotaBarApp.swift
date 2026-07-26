@@ -1,6 +1,7 @@
 import AppKit
 import Carbon
 import Combine
+import QuartzCore
 import SwiftUI
 
 final class FloatingPanel: NSPanel {
@@ -25,6 +26,92 @@ final class FloatingPanel: NSPanel {
     }
 }
 
+final class MenuBarMarqueeView: NSView {
+    private let iconView = NSImageView()
+    private let textClipView = NSView()
+    private let label = NSTextField(labelWithString: "")
+    private var currentText = ""
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        iconView.imageScaling = .scaleProportionallyDown
+        addSubview(iconView)
+
+        textClipView.wantsLayer = true
+        textClipView.layer?.masksToBounds = true
+        addSubview(textClipView)
+
+        label.isBezeled = false
+        label.drawsBackground = false
+        label.isEditable = false
+        label.isSelectable = false
+        label.textColor = .labelColor
+        label.wantsLayer = true
+        textClipView.addSubview(label)
+    }
+
+    required init?(coder: NSCoder) {
+        nil
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        nil
+    }
+
+    override func layout() {
+        super.layout()
+        iconView.frame = NSRect(
+            x: 3,
+            y: (bounds.height - 17) / 2,
+            width: 17,
+            height: 17
+        )
+        textClipView.frame = NSRect(
+            x: 25,
+            y: 0,
+            width: max(0, bounds.width - 28),
+            height: bounds.height
+        )
+        label.frame.origin.y = (textClipView.bounds.height - label.frame.height) / 2
+    }
+
+    func update(text: String, image: NSImage?, font: NSFont) {
+        iconView.image = image
+        guard currentText != text || label.layer?.animation(forKey: "marquee") == nil else {
+            return
+        }
+        currentText = text
+        let cycle = text + "      "
+        label.font = font
+        label.stringValue = cycle + cycle
+        label.sizeToFit()
+        layoutSubtreeIfNeeded()
+
+        let cycleWidth = (cycle as NSString).size(
+            withAttributes: [.font: font]
+        ).width
+        label.layer?.removeAllAnimations()
+        let animation = CABasicAnimation(keyPath: "transform.translation.x")
+        animation.fromValue = 0
+        animation.toValue = -cycleWidth
+        animation.duration = max(8, Double(cycleWidth / 24))
+        animation.repeatCount = .infinity
+        animation.timingFunction = CAMediaTimingFunction(name: .linear)
+        animation.isRemovedOnCompletion = false
+        label.layer?.add(animation, forKey: "marquee")
+    }
+
+    func stop() {
+        label.layer?.removeAllAnimations()
+        currentText = ""
+    }
+
+    var isAnimating: Bool {
+        label.layer?.animation(forKey: "marquee") != nil
+    }
+}
+
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let model = AppModel()
@@ -44,8 +131,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var panelLayoutObservation: AnyCancellable?
     private var providerOrderObservation: AnyCancellable?
     private var hiddenProvidersObservation: AnyCancellable?
-    private var compactSummaryTimer: Timer?
-    private var compactSummaryIndex = 0
+    private var menuBarDisplayObservation: AnyCancellable?
+    private var marqueeView: MenuBarMarqueeView?
+    private var screenParametersObserver: NSObjectProtocol?
     private var hotKeyRef: EventHotKeyRef?
     private var hotKeyHandlerRef: EventHandlerRef?
     private var showPanelObserver: NSObjectProtocol?
@@ -59,9 +147,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        compactSummaryTimer?.invalidate()
         if let showPanelObserver {
             NotificationCenter.default.removeObserver(showPanelObserver)
+        }
+        if let screenParametersObserver {
+            NotificationCenter.default.removeObserver(screenParametersObserver)
         }
         if let hotKeyRef {
             UnregisterEventHotKey(hotKeyRef)
@@ -147,10 +237,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem = item
         if let button = item.button {
-            button.image = NSImage(
-                systemSymbolName: "gauge.with.dots.needle.67percent",
-                accessibilityDescription: "Quota Bar"
-            )
+            button.image = statusImage
             button.imagePosition = .imageLeading
             button.font = .monospacedDigitSystemFont(ofSize: 11, weight: .semibold)
             button.target = self
@@ -222,13 +309,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         quitMenuItem = quit
         updateMenuTitles()
         updateStatusItem(snapshots: model.snapshots)
-        compactSummaryTimer = Timer.scheduledTimer(
-            withTimeInterval: 5,
-            repeats: true
+        screenParametersObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification,
+            object: nil,
+            queue: .main
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.compactSummaryIndex += 1
                 self.updateStatusItem(snapshots: self.model.snapshots)
             }
         }
@@ -261,6 +348,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 self.updateStatusItem(snapshots: self.model.snapshots)
                 self.updateMenuTitles()
                 self.resizePanel(for: self.model.preferences.panelLayout)
+            }
+        menuBarDisplayObservation = model.preferences.$menuBarDisplayMode
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.updateStatusItem(snapshots: self.model.snapshots)
             }
     }
 
@@ -300,22 +394,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let screenWidth = statusItem?.button?.window?.screen?.visibleFrame.width
             ?? NSScreen.main?.visibleFrame.width
             ?? 1_440
-        let useCompactSummary = MenuBarSummary.shouldUseCompactDisplay(
+        let useScrolling = MenuBarSummary.shouldUseScrolling(
+            mode: model.preferences.menuBarDisplayMode,
             screenWidth: screenWidth,
             fullSummaryWidth: fullWidth
         )
-        let summary: String
-        if useCompactSummary, !providers.isEmpty {
-            let provider = providers[compactSummaryIndex % providers.count]
-            summary = MenuBarSummary.text(
-                snapshots: snapshots,
-                preference: model.preferences.quotaWindow,
-                providers: [provider]
+        if useScrolling, let statusItem, let button = statusItem.button {
+            statusItem.length = 155
+            button.image = nil
+            button.title = ""
+            let marquee = marqueeView ?? MenuBarMarqueeView(frame: button.bounds)
+            if marqueeView == nil {
+                marquee.autoresizingMask = [.width, .height]
+                button.addSubview(marquee)
+                marqueeView = marquee
+            }
+            marquee.isHidden = false
+            marquee.frame = button.bounds
+            marquee.update(
+                text: fullSummary,
+                image: statusImage,
+                font: .monospacedSystemFont(ofSize: 11, weight: .semibold)
             )
         } else {
-            summary = fullSummary
+            marqueeView?.stop()
+            marqueeView?.isHidden = true
+            statusItem?.length = NSStatusItem.variableLength
+            statusItem?.button?.image = statusImage
+            statusItem?.button?.title = fullSummary
         }
-        statusItem?.button?.title = summary
         statusItem?.button?.toolTip = MenuBarSummary.accessibilityText(
             snapshots: snapshots,
             language: model.language,
@@ -323,6 +430,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             providers: providers
         )
         updateQuotaMenuItems(snapshots: snapshots)
+    }
+
+    private var statusImage: NSImage? {
+        NSImage(
+            systemSymbolName: "gauge.with.dots.needle.67percent",
+            accessibilityDescription: "Quota Bar"
+        )
     }
 
     private func updateQuotaMenuItems(snapshots: [ProviderSnapshot]) {
@@ -485,11 +599,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 }
 
 enum MenuBarSummary {
-    static func shouldUseCompactDisplay(
+    static func shouldUseScrolling(
+        mode: MenuBarDisplayMode,
         screenWidth: CGFloat,
         fullSummaryWidth: CGFloat
     ) -> Bool {
-        fullSummaryWidth > max(160, screenWidth * 0.14)
+        switch mode {
+        case .automatic:
+            fullSummaryWidth > max(160, screenWidth * 0.14)
+        case .full:
+            false
+        case .scrolling:
+            true
+        }
     }
 
     static func text(

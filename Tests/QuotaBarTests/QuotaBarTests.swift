@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 import Testing
 @testable import QuotaBar
 
@@ -168,19 +169,50 @@ import Testing
     )
 }
 
-@Test func menuBarUsesCompactSummaryWhenSpaceIsLimited() {
+@Test func menuBarDisplayModeControlsScrolling() {
     #expect(
-        MenuBarSummary.shouldUseCompactDisplay(
+        MenuBarSummary.shouldUseScrolling(
+            mode: .automatic,
             screenWidth: 1_440,
             fullSummaryWidth: 240
         )
     )
     #expect(
-        !MenuBarSummary.shouldUseCompactDisplay(
+        !MenuBarSummary.shouldUseScrolling(
+            mode: .automatic,
             screenWidth: 2_560,
             fullSummaryWidth: 240
         )
     )
+    #expect(
+        !MenuBarSummary.shouldUseScrolling(
+            mode: .full,
+            screenWidth: 1_440,
+            fullSummaryWidth: 400
+        )
+    )
+    #expect(
+        MenuBarSummary.shouldUseScrolling(
+            mode: .scrolling,
+            screenWidth: 2_560,
+            fullSummaryWidth: 100
+        )
+    )
+}
+
+@MainActor
+@Test func menuBarMarqueeUsesContinuousLayerAnimation() {
+    let marquee = MenuBarMarqueeView(
+        frame: NSRect(x: 0, y: 0, width: 155, height: 24)
+    )
+    marquee.update(
+        text: "Codex 60%  Claude 71%  Kimi 0%  DeepSeek ¥5.47",
+        image: nil,
+        font: .monospacedSystemFont(ofSize: 11, weight: .semibold)
+    )
+    #expect(marquee.isAnimating)
+    marquee.stop()
+    #expect(!marquee.isAnimating)
 }
 
 @Test func readsDeepSeekBalance() throws {
@@ -220,25 +252,6 @@ import Testing
     )
 }
 
-@Test func readsKimiVoucherAndCashBalance() throws {
-    let payload = """
-    {
-      "code": 0,
-      "data": {
-        "available_balance": 49.58894,
-        "voucher_balance": 46.58893,
-        "cash_balance": 3.00001
-      },
-      "status": true
-    }
-    """
-    let result = try KimiBalanceClient.parseResponse(Data(payload.utf8))
-    #expect(result.balance.currency == "CNY")
-    #expect(result.balance.total == Decimal(string: "49.58894"))
-    #expect(result.balance.granted == Decimal(string: "46.58893"))
-    #expect(result.balance.toppedUp == Decimal(string: "3.00001"))
-}
-
 @MainActor
 @Test func providerVisibilityAndOrderAreConfigurable() throws {
     let suite = "QuotaBarTests.\(UUID().uuidString)"
@@ -246,6 +259,12 @@ import Testing
     defer { defaults.removePersistentDomain(forName: suite) }
 
     let preferences = AppPreferences(defaults: defaults)
+    #expect(preferences.menuBarDisplayMode == .automatic)
+    preferences.menuBarDisplayMode = .scrolling
+    #expect(
+        defaults.string(forKey: "menuBarDisplayMode")
+            == MenuBarDisplayMode.scrolling.rawValue
+    )
     #expect(preferences.hiddenProviders == [.deepseek])
     preferences.setProvider(.deepseek, hidden: false)
     #expect(preferences.visibleProviderOrder.contains(.deepseek))

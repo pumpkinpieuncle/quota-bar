@@ -21,6 +21,15 @@ final class AppPreferences: ObservableObject {
         didSet { defaults.set(quotaWindow.rawValue, forKey: Keys.quotaWindow) }
     }
 
+    @Published var menuBarDisplayMode: MenuBarDisplayMode {
+        didSet {
+            defaults.set(
+                menuBarDisplayMode.rawValue,
+                forKey: Keys.menuBarDisplayMode
+            )
+        }
+    }
+
     @Published var panelLayout: PanelLayoutMode {
         didSet { defaults.set(panelLayout.rawValue, forKey: Keys.panelLayout) }
     }
@@ -56,6 +65,7 @@ final class AppPreferences: ObservableObject {
         static let refreshMode = "refreshMode"
         static let customRefreshSeconds = "customRefreshSeconds"
         static let quotaWindow = "quotaWindow"
+        static let menuBarDisplayMode = "menuBarDisplayMode"
         static let panelLayout = "panelLayout"
         static let providerOrder = "providerOrder"
         static let hiddenProviders = "hiddenProviders"
@@ -97,6 +107,15 @@ final class AppPreferences: ObservableObject {
             quotaWindow = saved
         } else {
             quotaWindow = .fiveHour
+        }
+
+        if
+            let raw = defaults.string(forKey: Keys.menuBarDisplayMode),
+            let saved = MenuBarDisplayMode(rawValue: raw)
+        {
+            menuBarDisplayMode = saved
+        } else {
+            menuBarDisplayMode = .automatic
         }
 
         if

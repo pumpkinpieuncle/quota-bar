@@ -470,24 +470,6 @@ private struct ProviderCard: View {
                     Spacer(minLength: 7)
                 }
 
-                if snapshot.id == .kimi, let balance = snapshot.balances.first {
-                    HStack(spacing: 6) {
-                        Text(
-                            language.text("赠送", "Voucher")
-                                + " \(balance.symbol)"
-                                + NSDecimalNumber(decimal: balance.granted).stringValue
-                        )
-                        Spacer(minLength: 2)
-                        Text(
-                            language.text("现金", "Cash")
-                                + " \(balance.symbol)"
-                                + NSDecimalNumber(decimal: balance.toppedUp).stringValue
-                        )
-                    }
-                    .font(.system(size: 8.8, weight: .semibold))
-                    .foregroundStyle(accent.opacity(0.82))
-                    .lineLimit(1)
-                }
             } else {
                 VStack(alignment: .leading, spacing: 7) {
                     Text("—")
@@ -698,18 +680,29 @@ private struct SettingsOverlay: View {
             settingRow(
                 title: language.text("摘要显示", "Summary display"),
                 detail: language.text(
-                    "用于菜单栏和单行模式",
-                    "Used by the menu bar and one-line mode"
+                    "额度窗口 · 顶部栏显示方式",
+                    "Quota window · menu bar display"
                 )
             ) {
-                Picker("", selection: $preferences.quotaWindow) {
-                    ForEach(QuotaWindowPreference.allCases) { window in
-                        Text(window.label(language: language)).tag(window)
+                HStack(spacing: 8) {
+                    Picker("", selection: $preferences.quotaWindow) {
+                        ForEach(QuotaWindowPreference.allCases) { window in
+                            Text(window.label(language: language)).tag(window)
+                        }
                     }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .frame(width: 150)
+
+                    Picker("", selection: $preferences.menuBarDisplayMode) {
+                        ForEach(MenuBarDisplayMode.allCases) { mode in
+                            Text(mode.label(language: language)).tag(mode)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .frame(width: 190)
                 }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .frame(width: 170)
             }
 
             HStack(spacing: 7) {
@@ -788,8 +781,6 @@ private struct ProviderManagerOverlay: View {
     @Binding var isPresented: Bool
     @State private var apiKey = ""
     @State private var isSaving = false
-    @State private var kimiAPIKey = ""
-    @State private var isSavingKimi = false
 
     init(model: AppModel, isPresented: Binding<Bool>) {
         self.model = model
@@ -830,12 +821,10 @@ private struct ProviderManagerOverlay: View {
                         providerRow(provider, index: index)
                     }
                 }
-                .frame(width: 230)
+                .frame(maxWidth: .infinity)
 
-                kimiSetup
-                    .frame(width: 250)
                 deepSeekSetup
-                    .frame(width: 250)
+                    .frame(width: 330)
             }
         }
         .padding(16)
@@ -915,80 +904,6 @@ private struct ProviderManagerOverlay: View {
         .background(
             Color.white.opacity(isHidden ? 0.025 : 0.05),
             in: RoundedRectangle(cornerRadius: 9, style: .continuous)
-        )
-    }
-
-    private var kimiSetup: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: ProviderID.kimi.symbol)
-                    .foregroundStyle(Color(red: 0.55, green: 0.66, blue: 1))
-                Text(language.text("Kimi 赠送额度", "Kimi voucher"))
-                    .font(.system(size: 11.5, weight: .semibold, design: .rounded))
-                Spacer()
-                Text(model.kimiAPIKeyConfigured
-                    ? language.text("已配置", "Configured")
-                    : language.text("可选", "Optional"))
-                    .font(.system(size: 8.5, weight: .bold))
-                    .foregroundStyle(
-                        model.kimiAPIKeyConfigured
-                            ? Color.green.opacity(0.75)
-                            : Color.white.opacity(0.35)
-                    )
-            }
-
-            SecureField(
-                model.kimiAPIKeyConfigured
-                    ? language.text("输入新 Key 可替换", "Enter a new key to replace")
-                    : "sk-…",
-                text: $kimiAPIKey
-            )
-            .textFieldStyle(.roundedBorder)
-
-            HStack(spacing: 7) {
-                Button {
-                    let key = kimiAPIKey
-                    guard !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                        return
-                    }
-                    isSavingKimi = true
-                    Task {
-                        await model.saveKimiAPIKey(key)
-                        kimiAPIKey = ""
-                        isSavingKimi = false
-                    }
-                } label: {
-                    Text(isSavingKimi
-                        ? language.text("验证中…", "Checking…")
-                        : language.text("保存并验证", "Save & verify"))
-                }
-                .buttonStyle(CollectorButtonStyle(
-                    tint: Color(red: 0.55, green: 0.66, blue: 1)
-                ))
-                .disabled(isSavingKimi || kimiAPIKey.isEmpty)
-
-                if model.kimiAPIKeyConfigured {
-                    Button {
-                        Task { await model.removeKimiAPIKey() }
-                    } label: {
-                        Text(language.text("移除", "Remove"))
-                    }
-                    .buttonStyle(CollectorButtonStyle(tint: .orange))
-                }
-            }
-
-            Text(language.text(
-                "赠送/现金余额来自 Kimi 开放平台；与 Kimi Code 登录分开，仅请求余额接口。",
-                "Voucher/cash balance uses a separate Kimi Open Platform key and only calls its balance endpoint."
-            ))
-            .font(.system(size: 8.8, weight: .medium))
-            .foregroundStyle(.white.opacity(0.4))
-            .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(11)
-        .background(
-            Color.white.opacity(0.045),
-            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
         )
     }
 
