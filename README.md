@@ -37,11 +37,20 @@ Quota Bar **不会为了显示状态而消耗 Codex、Claude 或 Kimi 的模型�
 - macOS 14 Sonoma 或更高版本
 - Apple Silicon
 
-v1.2.0 起的正式 Release 使用 Developer ID 签名、Apple 公证并装订票据，可直接通过 Gatekeeper 验证。源码本地构建在没有 Developer ID 证书时仍会退回 ad-hoc 签名，仅适合本机测试。
+当前 Release 使用 ad-hoc 临时签名，**未经过 Apple 公证**。请只从本仓库的官方 Releases 页面下载，并在安装前核对随包提供的 SHA-256 校验值。macOS 首次打开时会显示无法验证开发者的安全提示。
 
 ## 安装
 
 从 [Releases](https://github.com/pumpkinpieuncle/quota-bar/releases) 下载 DMG，将 `Quota Bar.app` 拖入 Applications。
+
+### macOS 提示“无法验证开发者”
+
+1. 先在“应用程序”中双击一次 `Quota Bar.app`，让 macOS 显示拦截提示；
+2. 打开“系统设置”→“隐私与安全性”；
+3. 向下滚动到“安全性”，找到 Quota Bar 的提示并点击“仍要打开”；
+4. 在再次出现的确认框中点击“打开”，必要时输入 Mac 登录密码。
+
+macOS 会把这个版本保存为安全例外，之后可以正常双击打开。此操作只应在确认安装包来自本仓库且校验值一致时进行。详见 [Apple 官方说明](https://support.apple.com/102445)。
 
 也可以从源码构建：
 

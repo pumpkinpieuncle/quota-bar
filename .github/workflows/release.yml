@@ -24,7 +24,7 @@ jobs:
       - name: Test
         run: swift test
 
-      - name: Require signing and notarization secrets
+      - name: Detect signing and notarization secrets
         env:
           CERTIFICATE_P12: ${{ secrets.DEVELOPER_ID_APPLICATION_P12 }}
           CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_APPLICATION_PASSWORD }}
@@ -32,13 +32,19 @@ jobs:
           NOTARY_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           NOTARY_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          test -n "$CERTIFICATE_P12"
-          test -n "$CERTIFICATE_PASSWORD"
-          test -n "$NOTARY_APPLE_ID"
-          test -n "$NOTARY_PASSWORD"
-          test -n "$NOTARY_TEAM_ID"
+          if [[ -n "$CERTIFICATE_P12" ]] &&
+             [[ -n "$CERTIFICATE_PASSWORD" ]] &&
+             [[ -n "$NOTARY_APPLE_ID" ]] &&
+             [[ -n "$NOTARY_PASSWORD" ]] &&
+             [[ -n "$NOTARY_TEAM_ID" ]]; then
+            echo "QUOTABAR_SIGNED_RELEASE=1" >> "$GITHUB_ENV"
+          else
+            echo "QUOTABAR_SIGNED_RELEASE=0" >> "$GITHUB_ENV"
+            echo "::warning::Publishing an ad-hoc signed, unnotarized macOS release."
+          fi
 
       - name: Import Developer ID certificate
+        if: env.QUOTABAR_SIGNED_RELEASE == '1'
         env:
           CERTIFICATE_P12: ${{ secrets.DEVELOPER_ID_APPLICATION_P12 }}
           CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_APPLICATION_PASSWORD }}
@@ -62,6 +68,7 @@ jobs:
         run: ./scripts/package-release.sh
 
       - name: Verify Gatekeeper acceptance
+        if: env.QUOTABAR_SIGNED_RELEASE == '1'
         run: |
           version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)
           xcrun stapler validate "dist/Quota Bar.app"
