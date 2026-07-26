@@ -7,6 +7,11 @@ struct LocalSnapshotBundle: Sendable {
     var kimi: ProviderSnapshot
 }
 
+struct ClaudeDesktopUsage: Sendable {
+    var limits: [LimitWindow]
+    var capturedAt: Date
+}
+
 enum LocalCollectors {
     private static var fm: FileManager { FileManager.default }
     private static var home: URL { fm.homeDirectoryForCurrentUser }
@@ -161,15 +166,66 @@ enum LocalCollectors {
         language: AppLanguage
     ) -> ProviderSnapshot {
         let cache = home.appending(path: ".quotabar/claude-status.json")
+        let desktopHistory = home.appending(
+            path: "Library/Application Support/Claude/plan-usage-history.json"
+        )
         let isRunning = containsStandaloneProcess("claude", in: processText)
-        let installed = fm.fileExists(atPath: home.appending(path: ".claude").path)
+        let desktopInstalled = fm.fileExists(atPath: "/Applications/Claude.app")
+            || fm.fileExists(atPath: home.appending(path: "Applications/Claude.app").path)
+        let installed = desktopInstalled
+            || fm.fileExists(atPath: home.appending(path: ".claude").path)
         let collectorInstalled = claudeCollectorInstalled()
         let collectorNeedsRepair = claudeCollectorNeedsRepair()
+        let desktopUsage = (try? Data(contentsOf: desktopHistory))
+            .flatMap(claudeDesktopUsage)
 
-        guard
-            let data = try? Data(contentsOf: cache),
-            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else {
+        let cliObject: [String: Any]? = {
+            guard
+                let data = try? Data(contentsOf: cache),
+                let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            else {
+                return nil
+            }
+            return object
+        }()
+        let cliLimits = cliObject.map(claudeLimits) ?? []
+
+        if var desktopUsage {
+            for index in desktopUsage.limits.indices {
+                guard desktopUsage.limits[index].resetAt == nil else { continue }
+                let matchingCLI = cliLimits.first {
+                    normalizedWindow($0.label) == normalizedWindow(
+                        desktopUsage.limits[index].label
+                    )
+                }
+                guard let matchingCLI else { continue }
+                desktopUsage.limits[index] = LimitWindow(
+                    id: desktopUsage.limits[index].id,
+                    label: desktopUsage.limits[index].label,
+                    remainingPercent: desktopUsage.limits[index].remainingPercent,
+                    resetAt: matchingCLI.resetAt
+                )
+            }
+
+            return ProviderSnapshot(
+                id: .claude,
+                activity: isRunning ? claudeActivity() : .idle,
+                limits: desktopUsage.limits,
+                detail: language.text(
+                    "Claude Desktop · 本地用量历史",
+                    "Claude Desktop · local usage history"
+                ),
+                source: language.text(
+                    "Claude Desktop 本地 plan-usage-history.json",
+                    "Local Claude Desktop plan-usage-history.json"
+                ),
+                lastUpdated: desktopUsage.capturedAt,
+                setupAvailable: false,
+                isInstalled: true
+            )
+        }
+
+        guard let object = cliObject else {
             let detail: String
             if claudeCommandLinkIsBroken() {
                 detail = language.text(
@@ -196,20 +252,12 @@ enum LocalCollectors {
                 detail: detail,
                 source: language.text("Claude 官方 status line", "Official Claude status line"),
                 lastUpdated: nil,
-                setupAvailable: installed,
+                setupAvailable: installed && !desktopInstalled,
                 isInstalled: installed
             )
         }
 
-        var limits: [LimitWindow] = []
-        if let rateLimits = object["rate_limits"] as? [String: Any] {
-            if let fiveHour = rateLimits["five_hour"] as? [String: Any] {
-                limits.append(makeClaudeWindow(fiveHour, id: "five-hour", label: "5 小时"))
-            }
-            if let sevenDay = rateLimits["seven_day"] as? [String: Any] {
-                limits.append(makeClaudeWindow(sevenDay, id: "seven-day", label: "7 天"))
-            }
-        }
+        let limits = claudeLimits(object)
 
         let capturedAt = number(object["captured_at"]).map { Date(timeIntervalSince1970: $0) }
         let modelObject = object["model"] as? [String: Any]
@@ -238,6 +286,108 @@ enum LocalCollectors {
             setupAvailable: false,
             isInstalled: true
         )
+    }
+
+    static func claudeDesktopUsage(_ data: Data) -> ClaudeDesktopUsage? {
+        guard
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let samples = object["samples"] as? [[String: Any]],
+            let latest = samples.max(by: {
+                (number($0["t"]) ?? 0) < (number($1["t"]) ?? 0)
+            }),
+            let timestamp = number(latest["t"]),
+            let usage = latest["u"] as? [String: Any]
+        else {
+            return nil
+        }
+
+        let org = latest["org"] as? String
+        let capturedAt = Date(timeIntervalSince1970: timestamp / 1_000)
+        var limits: [LimitWindow] = []
+        if let used = number(usage["fh"]) {
+            limits.append(LimitWindow(
+                id: "desktop-five-hour",
+                label: "5 小时",
+                remainingPercent: 100 - used,
+                resetAt: inferredDesktopReset(
+                    samples: samples,
+                    org: org,
+                    usageKey: "fh",
+                    window: 5 * 3_600
+                )
+            ))
+        }
+        if let used = number(usage["sd"]) {
+            limits.append(LimitWindow(
+                id: "desktop-seven-day",
+                label: "7 天",
+                remainingPercent: 100 - used,
+                resetAt: inferredDesktopReset(
+                    samples: samples,
+                    org: org,
+                    usageKey: "sd",
+                    window: 7 * 86_400
+                )
+            ))
+        }
+        guard !limits.isEmpty else { return nil }
+        return ClaudeDesktopUsage(limits: limits, capturedAt: capturedAt)
+    }
+
+    private static func claudeLimits(_ object: [String: Any]) -> [LimitWindow] {
+        guard let rateLimits = object["rate_limits"] as? [String: Any] else {
+            return []
+        }
+        var limits: [LimitWindow] = []
+        if let fiveHour = rateLimits["five_hour"] as? [String: Any] {
+            limits.append(makeClaudeWindow(fiveHour, id: "five-hour", label: "5 小时"))
+        }
+        if let sevenDay = rateLimits["seven_day"] as? [String: Any] {
+            limits.append(makeClaudeWindow(sevenDay, id: "seven-day", label: "7 天"))
+        }
+        return limits
+    }
+
+    private static func inferredDesktopReset(
+        samples: [[String: Any]],
+        org: String?,
+        usageKey: String,
+        window: TimeInterval
+    ) -> Date? {
+        let matching = samples.compactMap { sample -> (Date, Double)? in
+            guard
+                (sample["org"] as? String) == org,
+                let timestamp = number(sample["t"]),
+                let usage = sample["u"] as? [String: Any],
+                let value = number(usage[usageKey])
+            else {
+                return nil
+            }
+            return (Date(timeIntervalSince1970: timestamp / 1_000), value)
+        }.sorted { $0.0 < $1.0 }
+        guard matching.count >= 2 else { return nil }
+
+        for index in stride(from: matching.count - 1, through: 1, by: -1) {
+            let previous = matching[index - 1]
+            let current = matching[index]
+            if current.1 + 1 < previous.1
+                || (previous.1 == 0 && current.1 > 0) {
+                let reset = current.0.addingTimeInterval(window)
+                return reset > Date() ? reset : nil
+            }
+        }
+        return nil
+    }
+
+    private static func normalizedWindow(_ label: String) -> String {
+        let lower = label.lowercased()
+        if lower.contains("5") && (lower.contains("小时") || lower.contains("hour")) {
+            return "five-hour"
+        }
+        if lower.contains("7") && (lower.contains("天") || lower.contains("day")) {
+            return "seven-day"
+        }
+        return lower
     }
 
     private static func collectKimi(

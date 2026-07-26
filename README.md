@@ -1,6 +1,6 @@
 # Quota Bar
 
-一个轻量、原生的 macOS 菜单栏浮窗，用来查看 Codex、Claude Code、Kimi Code 的剩余额度与当前工作状态。
+一个轻量、原生的 macOS 菜单栏浮窗，用来查看 Codex、Claude Desktop / Code、Kimi Code 的剩余额度与当前工作状态。
 
 A lightweight native macOS floating panel for Codex, Claude Code, and Kimi Code quotas and work status.
 
@@ -17,19 +17,19 @@ A lightweight native macOS floating panel for Codex, Claude Code, and Kimi Code 
 
 Quota Bar **不会为了显示状态而消耗 Codex、Claude 或 Kimi 的模型额度**：
 
-- Codex：只读 `~/.codex/sessions` 已有的 rate-limit 快照、本地事件和任务进程。
-- Claude：使用 Claude Code 官方 status line 与 **command hooks**。不会使用 prompt/agent hooks，也不会给 Claude 发送测试提示词。
+- Codex：通过官方 Codex app-server 的 `account/rateLimits/read` 读取当前登录账号的额度，并读取本地事件和任务进程判断工作状态。该接口不会生成模型回复。
+- Claude Desktop：只读它维护的本地 `plan-usage-history.json`；Claude Code 使用官方 status line 与 **command hooks**。不会使用 prompt/agent hooks，也不会给 Claude 发送测试提示词。
 - Kimi：读取本地会话事件；额度只通过 Kimi Code 官方 `/usages` HTTP 端点同步，它不是模型生成请求。智能模式在 Kimi 空闲时复用本地缓存。
 - 不包含模型 SDK、遥测或第三方分析。
 
-状态是本地事件推断：Claude 的审批/停止事件较精确；Codex 和 Kimi 在没有公开审批事件的场景中会采用最近会话事件与进程活跃度判断。
+额度与工作状态采用不同边界：Codex 额度是账号级数据，同账号登录多台 Mac 时会各自从服务端刷新；“等你审批 / 当牛马中 / 摸鱼中”等状态只描述本机，不上传也不跨设备同步。
 
 ## 系统要求
 
 - macOS 14 Sonoma 或更高版本
 - Apple Silicon
 
-Release 中的应用使用 ad-hoc 签名，未经过 Apple 公证。首次打开若被 macOS 拦截，请在“系统设置 → 隐私与安全性”中允许打开。
+v1.2.0 起的正式 Release 使用 Developer ID 签名、Apple 公证并装订票据，可直接通过 Gatekeeper 验证。源码本地构建在没有 Developer ID 证书时仍会退回 ad-hoc 签名，仅适合本机测试。
 
 ## 安装
 
@@ -52,6 +52,8 @@ open "dist/Quota Bar.app"
 旧的 `/Applications/Quota Bar.app` 会备份到 `dist/Quota Bar.previous.app`。
 
 ## Claude 额度与状态采集
+
+Claude Desktop 安装后，Quota Bar 会自动读取它的本地套餐使用历史并显示 5 小时/7 天剩余额度。Claude Desktop 当前不会把精确重置时间写入本地历史，因此重置时间会在可由历史变化推断或 Claude Code status line 已提供时显示。
 
 首次打开时，Claude 卡片会显示“启用零额度采集”。点击后，Quota Bar 会：
 
@@ -85,6 +87,13 @@ Claude 官方仅对 Claude.ai Pro/Max 订阅用户提供 `rate_limits` 字段，
 ```
 
 脚本会生成 DMG、ZIP 和 SHA-256 校验文件到 `dist/release/v<version>/`。
+
+正式发布需要钥匙串中的 `Developer ID Application` 证书，以及以下任一公证凭据：
+
+- 本机 `QUOTABAR_NOTARY_PROFILE`（由 `notarytool store-credentials` 创建）；或
+- `APPLE_ID`、`APPLE_APP_SPECIFIC_PASSWORD`、`APPLE_TEAM_ID`。
+
+GitHub Actions 使用同名 secrets，并额外需要 base64 编码的 `DEVELOPER_ID_APPLICATION_P12` 与 `DEVELOPER_ID_APPLICATION_PASSWORD`。
 
 ## License
 

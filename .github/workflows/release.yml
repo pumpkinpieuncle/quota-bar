@@ -1,0 +1,86 @@
+name: Build signed macOS release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify version matches tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          app_version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)
+          test "v$app_version" = "$GITHUB_REF_NAME"
+
+      - name: Test
+        run: swift test
+
+      - name: Require signing and notarization secrets
+        env:
+          CERTIFICATE_P12: ${{ secrets.DEVELOPER_ID_APPLICATION_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_APPLICATION_PASSWORD }}
+          NOTARY_APPLE_ID: ${{ secrets.APPLE_ID }}
+          NOTARY_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          NOTARY_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          test -n "$CERTIFICATE_P12"
+          test -n "$CERTIFICATE_PASSWORD"
+          test -n "$NOTARY_APPLE_ID"
+          test -n "$NOTARY_PASSWORD"
+          test -n "$NOTARY_TEAM_ID"
+
+      - name: Import Developer ID certificate
+        env:
+          CERTIFICATE_P12: ${{ secrets.DEVELOPER_ID_APPLICATION_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_APPLICATION_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/quotabar-signing.keychain-db"
+          certificate="$RUNNER_TEMP/developer-id.p12"
+          printf '%s' "$CERTIFICATE_P12" | base64 --decode > "$certificate"
+          security create-keychain -p "$RUNNER_TEMP" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$RUNNER_TEMP" "$keychain"
+          security import "$certificate" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          security list-keychains -d user -s "$keychain"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$RUNNER_TEMP" "$keychain"
+          security find-identity -v -p codesigning "$keychain"
+
+      - name: Build, notarize, and package
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: ./scripts/package-release.sh
+
+      - name: Verify Gatekeeper acceptance
+        run: |
+          version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)
+          xcrun stapler validate "dist/Quota Bar.app"
+          xcrun stapler validate "dist/release/v$version/Quota-Bar-$version.dmg"
+          spctl --assess --type execute --verbose=2 "dist/Quota Bar.app"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)
+          tag="v$version"
+          if ! git rev-parse "$tag" >/dev/null 2>&1; then
+            git tag "$tag"
+            git push origin "$tag"
+          fi
+          gh release create "$tag" \
+            "dist/release/$tag/Quota-Bar-$version.dmg" \
+            "dist/release/$tag/Quota-Bar-$version.zip" \
+            "dist/release/$tag/SHA256SUMS.txt" \
+            --title "Quota Bar $tag" \
+            --notes-file RELEASE_NOTES_1.2.0.md

@@ -37,3 +37,79 @@ import Testing
         customSeconds: 1
     ) == 10)
 }
+
+@Test func readsClaudeDesktopPlanUsageHistory() throws {
+    let payload = """
+    {
+      "version": 2,
+      "samples": [
+        {"t": 1785034681232, "org": "org-a", "u": {"fh": 48, "sd": 21}},
+        {"t": 1785037081540, "org": "org-a", "u": {"fh": 93, "sd": 25}}
+      ]
+    }
+    """
+    let usage = try #require(
+        LocalCollectors.claudeDesktopUsage(Data(payload.utf8))
+    )
+    #expect(usage.limits.count == 2)
+    #expect(usage.limits[0].label == "5 小时")
+    #expect(usage.limits[0].remainingPercent == 7)
+    #expect(usage.limits[1].label == "7 天")
+    #expect(usage.limits[1].remainingPercent == 75)
+}
+
+@Test func readsCodexAccountRateLimits() throws {
+    let payload = """
+    {
+      "id": 2,
+      "result": {
+        "rateLimits": {
+          "primary": {
+            "usedPercent": 61,
+            "windowDurationMins": 300,
+            "resetsAt": 1785034681
+          },
+          "secondary": {
+            "usedPercent": 18,
+            "windowDurationMins": 10080,
+            "resetsAt": 1785632632
+          },
+          "planType": "plus"
+        },
+        "rateLimitsByLimitId": {
+          "codex": {
+            "primary": {
+              "usedPercent": 61,
+              "windowDurationMins": 300,
+              "resetsAt": 1785034681
+            },
+            "secondary": {
+              "usedPercent": 18,
+              "windowDurationMins": 10080,
+              "resetsAt": 1785632632
+            },
+            "planType": "plus"
+          }
+        }
+      }
+    }
+    """
+    let usage = try CodexUsageClient.parseResponse(
+        Data(payload.utf8),
+        fetchedAt: Date(timeIntervalSince1970: 1785034682)
+    )
+    #expect(usage.plan == "Plus")
+    #expect(usage.limits.count == 2)
+    #expect(usage.limits[0].label == "5 小时")
+    #expect(usage.limits[0].remainingPercent == 39)
+    #expect(usage.limits[1].label == "7 天")
+    #expect(usage.limits[1].remainingPercent == 82)
+    #expect(usage.limits[1].resetAt == Date(timeIntervalSince1970: 1785632632))
+
+    let english = try CodexUsageClient.parseResponse(
+        Data(payload.utf8),
+        language: .english
+    )
+    #expect(english.limits[0].label == "5 hours")
+    #expect(english.limits[1].label == "7 days")
+}

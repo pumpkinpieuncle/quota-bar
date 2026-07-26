@@ -13,6 +13,7 @@ final class AppModel: ObservableObject {
 
     let preferences = AppPreferences()
 
+    private let codexClient = CodexUsageClient()
     private let kimiClient = KimiUsageClient()
     private var scheduledRefresh: Task<Void, Never>?
 
@@ -20,7 +21,7 @@ final class AppModel: ObservableObject {
 
     var versionText: String {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString")
-            as? String ?? "1.1.0"
+            as? String ?? "1.2.0"
         return "v\(version)"
     }
 
@@ -48,6 +49,34 @@ final class AppModel: ObservableObject {
             LocalCollectors.collect(language: currentLanguage)
         }.value
         var merged = [bundle.codex, bundle.claude, bundle.kimi]
+
+        if bundle.codex.isInstalled {
+            do {
+                let usage = try await codexClient.fetchIfNeeded(
+                    force: forceRemote,
+                    language: currentLanguage
+                )
+                if let index = merged.firstIndex(where: { $0.id == .codex }) {
+                    merged[index].limits = usage.limits
+                    merged[index].lastUpdated = usage.fetchedAt
+                    merged[index].source = currentLanguage.text(
+                        "Codex 账号额度 + 本地任务状态",
+                        "Codex account quota + local task status"
+                    )
+                    if !usage.plan.isEmpty,
+                       !merged[index].detail.localizedCaseInsensitiveContains(usage.plan) {
+                        merged[index].detail = "\(usage.plan) · \(merged[index].detail)"
+                    }
+                }
+            } catch {
+                if let index = merged.firstIndex(where: { $0.id == .codex }) {
+                    merged[index].source = currentLanguage.text(
+                        "Codex 本地快照（账号同步暂不可用）",
+                        "Local Codex snapshot (account sync unavailable)"
+                    )
+                }
+            }
+        }
 
         if bundle.kimi.isInstalled {
             do {
