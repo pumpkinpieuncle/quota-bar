@@ -1,27 +1,45 @@
 # Quota Bar
 
-一个轻量、原生的 macOS 菜单栏浮窗，用来查看 Codex、Claude Desktop / Code、Kimi Code 的剩余额度、DeepSeek API 余额与当前工作状态。
+一个轻量、原生的 macOS 菜单栏浮窗，用来查看 Codex、Claude Desktop / Code、Kimi Code、Gemini CLI、Grok CLI 的剩余额度、DeepSeek API 余额与当前工作状态，还能把同样的信息推到备用手机或 ESP32 上。
 
-A lightweight native macOS floating panel for Codex, Claude Code, Kimi Code quotas and work status, plus DeepSeek account balance.
+A lightweight native macOS floating panel for Codex, Claude Code, Kimi Code, Gemini CLI and Grok CLI quotas and work status, plus DeepSeek account balance — and it can mirror all of it to a spare phone or an ESP32.
 
 <img width="843" height="293" alt="image" src="https://github.com/user-attachments/assets/11484a74-5f22-4ed2-bb9c-87a9de099feb" />
 
 ## 功能 / Features
 
-- 同屏展示各个服务的额度窗口、余额和重置时间。
-- 顶部菜单栏可切换 5 小时或周额度；自动模式在宽屏显示完整摘要，小屏平滑循环滚动，也可强制选择完整或滚动方式。
+- 同屏展示各个服务的额度窗口、余额和重置时间，每个服务都用自己的品牌标识。
+- 顶部菜单栏可切换 5 小时或周额度；卡片上的大数字始终跟随这个选择。
+- 自动模式在宽屏显示完整摘要，小屏平滑循环滚动，也可强制选择完整或滚动方式。
 - 左键显示/收起浮窗，右键打开更多操作；若顶部栏被 macOS 遮挡，可按 `⌥⌘Q` 恢复浮窗，也可在“应用程序”中再次打开 Quota Bar。
-- 浮窗支持标准卡片和 72px 高的单行模式；红黄绿三色按钮分别用于隐藏、单行和恢复标准视图。
+- 浮窗支持标准卡片和单行模式；红黄绿三色按钮分别用于隐藏、单行和恢复标准视图。
+- **浮窗可以拖到屏幕最上边和最左边**，靠近边缘会自动贴齐，位置在重启后保留。
+- **拖拽浮窗边缘即可调整宽高**，标准视图和单行模式各自记住尺寸；设置里可一键恢复默认。
+- 标准视图使用自适应网格，服务多时自动换行。
 - 模型管理支持排序、单独隐藏/显示；顶部栏、标准卡片和单行模式都会采用相同顺序。
 - 模型管理可按服务暂停额度联网刷新，同时继续读取本机工作状态。
+- **低额度提醒**：可设 5/10/20/30%，低于阈值时卡片、单行和菜单栏图标一起变色。
+- **HUD 外接屏**：一键把额度推送到备用手机或 ESP32，详见 [`HUD/`](HUD/)。
 - 深色高对比浮窗不会随浅色桌面或窗口背景变得难以阅读。
-- 浮窗可贴紧屏幕可用区域顶部，四服务视图加宽以保持名称单行显示。
 - DeepSeek 可通过官方 `/user/balance` 查看账户余额，API Key 仅保存于 macOS 钥匙串。
-- 状态包括：等你审批、当牛马中、思考中、摸鱼中、未运行、需处理。
+- 状态包括：等你审批、当牛马中、思考中、摸鱼中、未运行、需处理、已连接。
 - 智能刷新默认在工作中每 30 秒检查一次，全部空闲时降到每 5 分钟。
 - 可选 30 秒至 6 小时的预设、自定义 10–86400 秒（最长 24 小时），或完全手动刷新。
 - 中文与 English 即时切换。
 - 菜单栏常驻、跨桌面置顶、无需打开浏览器。
+
+### 支持的服务 / Supported services
+
+| 服务 | 额度来源 | 默认显示 |
+| --- | --- | --- |
+| Codex | 官方 app-server `account/rateLimits/read` | ✅ |
+| Claude | Claude Desktop 本地用量历史 / Claude Code status line | ✅ |
+| Kimi | Kimi Code 官方 `/usages` | ✅ |
+| DeepSeek | 官方 `GET /user/balance`（需 API Key） | 需手动开启 |
+| Gemini | 本地 CLI 日志，按免费层每日 1000 次请求折算 | 需手动开启 |
+| Grok | 本机工作状态与所用模型（xAI 未公开额度接口） | 需手动开启 |
+
+DeepSeek、Gemini、Grok 默认隐藏，在浮窗的“模型管理”里打开即可。
 
 ## 零模型调用原则 / Zero model calls
 
@@ -31,6 +49,9 @@ Quota Bar **不会为了显示状态而消耗 Codex、Claude 或 Kimi 的模型�
 - Claude Desktop：只读它维护的本地 `plan-usage-history.json`；Claude Code 使用官方 status line 与 **command hooks**。不会使用 prompt/agent hooks，也不会给 Claude 发送测试提示词。
 - Kimi：读取本地会话事件；额度只通过 Kimi Code 官方 `/usages` HTTP 端点同步，不是模型生成请求。
 - DeepSeek：只请求官方 `GET /user/balance` 账户余额接口，不调用对话或补全模型；隐藏后停止远程同步。
+- Gemini：只读 `~/.gemini/tmp/*/logs.json` 里的本地提问时间戳，用来统计当天请求数，完全不联网。
+- Grok：只读 `~/.grok` 里的本地配置和最近改动时间，完全不联网。
+- HUD 外接屏复用浮窗已有的快照，不会产生任何额外请求。
 - 不包含模型 SDK、遥测或第三方分析。
 
 额度与工作状态采用不同边界：Codex 额度是账号级数据，同账号登录多台 Mac 时会各自从服务端刷新；“等你审批 / 当牛马中 / 摸鱼中”等状态只描述本机，不上传也不跨设备同步。
@@ -97,12 +118,24 @@ Claude 官方仅对 Claude.ai Pro/Max 订阅用户提供 `rate_limits` 字段，
 
 注意：stdin 只能读取一次。已有脚本需要先把 stdin 保存到临时文件，再分别传给原逻辑和 `QuotaBarCapture`。
 
+## HUD 外接屏 / HUD display
+
+打开设置里的 “HUD 外接屏”，Quota Bar 会在本机起一个**只读**的小 HTTP 服务，
+把浮窗上的数据同步给同一局域网里的设备：
+
+- **备用手机 / 平板**：浏览器打开面板给出的网址即可，自适应竖横屏、支持屏幕常亮；
+- **ESP32 + OLED**：仓库自带固件，读取 `/api/hud.txt` 这种单行文本，不需要 JSON 库。
+
+服务只接受 `GET`，需要令牌，可以只监听本机，也可以随时换新令牌。完整说明、接口
+文档和固件都在 [`HUD/`](HUD/) 目录里。
+
 ## 数据与隐私
 
 - Claude/Kimi 的缓存位于 `~/.quotabar/`，权限为仅当前用户可读写。
 - Kimi OAuth token 只在内存中发送到 Kimi 官方域名，不写入日志或 Quota Bar 缓存。
 - DeepSeek API Key 只保存在 macOS 钥匙串中，并仅发送到 `api.deepseek.com/user/balance`。
 - Claude 配置首次修改前会备份为 `~/.claude/settings.json.quotabar-backup`。
+- HUD 外接屏默认关闭；打开后只监听局域网端口、只提供 `GET`，令牌可随时更换，任何设备都无法通过它改动 Mac 上的设置。
 
 ## 发布构建
 

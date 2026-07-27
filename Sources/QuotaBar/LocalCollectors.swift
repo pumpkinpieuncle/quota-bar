@@ -5,6 +5,10 @@ struct LocalSnapshotBundle: Sendable {
     var codex: ProviderSnapshot
     var claude: ProviderSnapshot
     var kimi: ProviderSnapshot
+    var gemini: ProviderSnapshot
+    var grok: ProviderSnapshot
+
+    var all: [ProviderSnapshot] { [codex, claude, kimi, gemini, grok] }
 }
 
 struct ClaudeDesktopUsage: Sendable {
@@ -21,7 +25,9 @@ enum LocalCollectors {
         return LocalSnapshotBundle(
             codex: collectCodex(processText: processText, language: language),
             claude: collectClaude(processText: processText, language: language),
-            kimi: collectKimi(processText: processText, language: language)
+            kimi: collectKimi(processText: processText, language: language),
+            gemini: collectGemini(processText: processText, language: language),
+            grok: collectGrok(processText: processText, language: language)
         )
     }
 
@@ -203,7 +209,8 @@ enum LocalCollectors {
                     id: desktopUsage.limits[index].id,
                     label: desktopUsage.limits[index].label,
                     remainingPercent: desktopUsage.limits[index].remainingPercent,
-                    resetAt: matchingCLI.resetAt
+                    resetAt: matchingCLI.resetAt,
+                    windowMinutes: desktopUsage.limits[index].windowMinutes
                 )
             }
 
@@ -314,7 +321,8 @@ enum LocalCollectors {
                     org: org,
                     usageKey: "fh",
                     window: 5 * 3_600
-                )
+                ),
+                windowMinutes: 300
             ))
         }
         if let used = number(usage["sd"]) {
@@ -327,7 +335,8 @@ enum LocalCollectors {
                     org: org,
                     usageKey: "sd",
                     window: 7 * 86_400
-                )
+                ),
+                windowMinutes: 10_080
             ))
         }
         guard !limits.isEmpty else { return nil }
@@ -340,10 +349,14 @@ enum LocalCollectors {
         }
         var limits: [LimitWindow] = []
         if let fiveHour = rateLimits["five_hour"] as? [String: Any] {
-            limits.append(makeClaudeWindow(fiveHour, id: "five-hour", label: "5 小时"))
+            limits.append(
+                makeClaudeWindow(fiveHour, id: "five-hour", label: "5 小时", minutes: 300)
+            )
         }
         if let sevenDay = rateLimits["seven_day"] as? [String: Any] {
-            limits.append(makeClaudeWindow(sevenDay, id: "seven-day", label: "7 天"))
+            limits.append(
+                makeClaudeWindow(sevenDay, id: "seven-day", label: "7 天", minutes: 10_080)
+            )
         }
         return limits
     }
@@ -445,6 +458,165 @@ enum LocalCollectors {
         )
     }
 
+    /// Gemini CLI keeps one `logs.json` per project under `~/.gemini/tmp`, each
+    /// holding the prompts sent from that folder. Counting today's prompts gives
+    /// an honest read on the Code Assist daily request allowance without ever
+    /// talking to Google.
+    private static func collectGemini(
+        processText: String,
+        language: AppLanguage
+    ) -> ProviderSnapshot {
+        let root = home.appending(path: ".gemini")
+        let installed = fm.fileExists(atPath: root.path)
+        let isRunning = containsStandaloneProcess("gemini", in: processText)
+        guard installed else {
+            return ProviderSnapshot(
+                id: .gemini,
+                activity: .offline,
+                limits: [],
+                detail: language.text("未发现 Gemini CLI", "Gemini CLI not found"),
+                source: language.text("本地 ~/.gemini", "Local ~/.gemini"),
+                lastUpdated: nil,
+                setupAvailable: false,
+                isInstalled: false
+            )
+        }
+
+        let logs = geminiPromptTimestamps(root: root.appending(path: "tmp"))
+        let startOfDay = Calendar.current.startOfDay(for: Date())
+        let today = logs.filter { $0 >= startOfDay }.count
+        let latest = logs.max()
+        let dailyAllowance = 1_000.0
+        let limits = [
+            LimitWindow(
+                id: "gemini-daily",
+                label: language.text("1 天", "1 day"),
+                remainingPercent: (dailyAllowance - Double(today)) / dailyAllowance * 100,
+                resetAt: Calendar.current.date(byAdding: .day, value: 1, to: startOfDay),
+                windowMinutes: 1_440
+            )
+        ]
+
+        let recentlyChanged = latest.map { Date().timeIntervalSince($0) < 90 } ?? false
+        let activity: ActivityState
+        if isRunning {
+            activity = recentlyChanged ? .working : .idle
+        } else {
+            activity = .offline
+        }
+
+        return ProviderSnapshot(
+            id: .gemini,
+            activity: activity,
+            limits: limits,
+            detail: language.text(
+                "今日 \(today)/\(Int(dailyAllowance)) 次请求",
+                "\(today)/\(Int(dailyAllowance)) requests today"
+            ),
+            source: language.text(
+                "Gemini CLI 本地会话日志（免费层每日 1000 次）",
+                "Local Gemini CLI logs (free tier: 1000 requests/day)"
+            ),
+            lastUpdated: latest,
+            setupAvailable: false,
+            isInstalled: true
+        )
+    }
+
+    private static func geminiPromptTimestamps(root: URL) -> [Date] {
+        guard let entries = try? fm.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            return []
+        }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let plain = ISO8601DateFormatter()
+
+        var dates: [Date] = []
+        for entry in entries {
+            let log = entry.appending(path: "logs.json")
+            guard
+                let size = try? log.resourceValues(forKeys: [.fileSizeKey]).fileSize,
+                // Refreshes run as often as every 30s; skip a runaway log rather
+                // than re-parsing megabytes of prompts each time.
+                size < 8 * 1_024 * 1_024,
+                let data = try? Data(contentsOf: log),
+                let rows = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]
+            else {
+                continue
+            }
+            for row in rows {
+                guard let raw = row["timestamp"] as? String else { continue }
+                if let date = formatter.date(from: raw) ?? plain.date(from: raw) {
+                    dates.append(date)
+                }
+            }
+        }
+        return dates
+    }
+
+    /// Grok CLI keeps its settings and conversation history under `~/.grok`.
+    /// There is no public quota endpoint, so this reports work state and the
+    /// configured model rather than inventing a percentage.
+    private static func collectGrok(
+        processText: String,
+        language: AppLanguage
+    ) -> ProviderSnapshot {
+        let root = home.appending(path: ".grok")
+        let installed = fm.fileExists(atPath: root.path)
+        let isRunning = containsStandaloneProcess("grok", in: processText)
+        guard installed else {
+            return ProviderSnapshot(
+                id: .grok,
+                activity: .offline,
+                limits: [],
+                detail: language.text("未发现 Grok CLI", "Grok CLI not found"),
+                source: language.text("本地 ~/.grok", "Local ~/.grok"),
+                lastUpdated: nil,
+                setupAvailable: false,
+                isInstalled: false
+            )
+        }
+
+        let settings: [String: Any]? = (
+            try? Data(contentsOf: root.appending(path: "user-settings.json"))
+        )
+        .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+        let model = (settings?["defaultModel"] as? String)
+            ?? (settings?["model"] as? String)
+            ?? "Grok"
+        let latest = latestFile(in: root, named: nil, suffix: nil)
+        let modified = latest.flatMap(modificationDate)
+        let recentlyChanged = modified.map { Date().timeIntervalSince($0) < 90 } ?? false
+
+        let activity: ActivityState
+        if isRunning {
+            activity = recentlyChanged ? .working : .idle
+        } else {
+            activity = .offline
+        }
+
+        return ProviderSnapshot(
+            id: .grok,
+            activity: activity,
+            limits: [],
+            detail: language.text(
+                "\(model) · 额度需在 xAI 控制台查看",
+                "\(model) · check quota in the xAI console"
+            ),
+            source: language.text(
+                "Grok CLI 本地状态（xAI 未公开额度接口）",
+                "Local Grok CLI state (xAI exposes no quota endpoint)"
+            ),
+            lastUpdated: modified,
+            setupAvailable: false,
+            isInstalled: true
+        )
+    }
+
     private static func makePercentWindow(
         _ object: [String: Any],
         fallbackID: String
@@ -456,14 +628,16 @@ enum LocalCollectors {
             id: "\(fallbackID)-\(minutes)",
             label: windowLabel(minutes: minutes),
             remainingPercent: 100 - used,
-            resetAt: reset
+            resetAt: reset,
+            windowMinutes: minutes > 0 ? minutes : nil
         )
     }
 
     private static func makeClaudeWindow(
         _ object: [String: Any],
         id: String,
-        label: String
+        label: String,
+        minutes: Int
     ) -> LimitWindow {
         let used = number(object["used_percentage"]) ?? 0
         let reset = flexibleDate(object["resets_at"])
@@ -471,7 +645,8 @@ enum LocalCollectors {
             id: id,
             label: label,
             remainingPercent: 100 - used,
-            resetAt: reset
+            resetAt: reset,
+            windowMinutes: minutes
         )
     }
 

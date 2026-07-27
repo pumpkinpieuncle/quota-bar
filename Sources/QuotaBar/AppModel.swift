@@ -13,6 +13,7 @@ final class AppModel: ObservableObject {
     @Published var deepSeekKeyConfigured = DeepSeekCredentialStore.load() != nil
 
     let preferences = AppPreferences()
+    let hud = HUDBridge()
 
     private let codexClient = CodexUsageClient()
     private let deepSeekClient = DeepSeekBalanceClient()
@@ -21,11 +22,7 @@ final class AppModel: ObservableObject {
 
     var language: AppLanguage { preferences.language }
 
-    var versionText: String {
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString")
-            as? String ?? "1.2.6"
-        return "v\(version)"
-    }
+    var versionText: String { "v\(AppVersion.short)" }
 
     var refreshPolicyText: String {
         preferences.refreshMode.label(language: language)
@@ -60,7 +57,7 @@ final class AppModel: ObservableObject {
         let bundle = await Task.detached(priority: .utility) {
             LocalCollectors.collect(language: currentLanguage)
         }.value
-        var merged = [bundle.codex, bundle.claude, bundle.kimi]
+        var merged = bundle.all
         merged.append(
             ProviderSnapshot(
                 id: .deepseek,
@@ -218,14 +215,33 @@ final class AppModel: ObservableObject {
         snapshots = merged
         lastRefresh = Date()
         isRefreshing = false
+        hud.apply(preferences: preferences, snapshots: merged)
         scheduleNextRefresh()
     }
 
     func preferencesChanged(languageChanged: Bool) {
+        hud.apply(preferences: preferences, snapshots: snapshots)
         if languageChanged {
             Task { await refresh(forceRemote: false) }
         } else {
             scheduleNextRefresh()
+        }
+    }
+
+    /// Any provider running at or below the configured warning threshold.
+    var lowQuotaProviders: [ProviderID] {
+        guard preferences.lowQuotaThreshold > 0 else { return [] }
+        return visibleSnapshots.compactMap { snapshot in
+            guard
+                let limit = QuotaWindowSelector.primary(
+                    in: snapshot.limits,
+                    preference: preferences.quotaWindow
+                ),
+                Int(limit.clampedRemaining.rounded()) <= preferences.lowQuotaThreshold
+            else {
+                return nil
+            }
+            return snapshot.id
         }
     }
 

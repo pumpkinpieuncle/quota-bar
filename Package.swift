@@ -12,8 +12,16 @@ let package = Package(
         .executable(name: "QuotaBarCapture", targets: ["QuotaBarCapture"])
     ],
     targets: [
+        // Everything the phone/ESP32 HUD needs lives in HUD/ so the display
+        // side of the project can be read (and reused) on its own.
+        .target(
+            name: "QuotaBarHUD",
+            path: "HUD/macOS",
+            resources: [.embedInCode("Resources/hud.html")]
+        ),
         .executableTarget(
             name: "QuotaBar",
+            dependencies: ["QuotaBarHUD"],
             path: "Sources/QuotaBar"
         ),
         .executableTarget(
@@ -22,7 +30,7 @@ let package = Package(
         ),
         .testTarget(
             name: "QuotaBarTests",
-            dependencies: ["QuotaBar"],
+            dependencies: ["QuotaBar", "QuotaBarHUD"],
             path: "Tests/QuotaBarTests"
         )
     ]

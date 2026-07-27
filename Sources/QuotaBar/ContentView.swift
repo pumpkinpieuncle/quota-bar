@@ -7,10 +7,16 @@ struct ContentView: View {
     @State private var showSettings = false
     @State private var showProviderManager = false
     let onHideToMenuBar: () -> Void
+    let onResetGeometry: () -> Void
 
-    init(model: AppModel, onHideToMenuBar: @escaping () -> Void = {}) {
+    init(
+        model: AppModel,
+        onHideToMenuBar: @escaping () -> Void = {},
+        onResetGeometry: @escaping () -> Void = {}
+    ) {
         self.model = model
         self.onHideToMenuBar = onHideToMenuBar
+        self.onResetGeometry = onResetGeometry
         _preferences = ObservedObject(wrappedValue: model.preferences)
     }
 
@@ -33,21 +39,22 @@ struct ContentView: View {
                 compactBody
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))
             } else {
-                VStack(spacing: 12) {
+                VStack(spacing: 10) {
                     header
                     cards
                     footer
                 }
-                .padding(16)
+                .padding(14)
             }
 
             if showSettings, preferences.panelLayout == .standard {
                 SettingsOverlay(
                     model: model,
                     isPresented: $showSettings,
-                    showProviderManager: $showProviderManager
+                    showProviderManager: $showProviderManager,
+                    onResetGeometry: onResetGeometry
                 )
-                    .padding(12)
+                    .padding(10)
                     .transition(.scale(scale: 0.96).combined(with: .opacity))
             }
 
@@ -56,16 +63,13 @@ struct ContentView: View {
                     model: model,
                     isPresented: $showProviderManager
                 )
-                .padding(12)
+                .padding(10)
                 .transition(.scale(scale: 0.96).combined(with: .opacity))
             }
         }
-        .frame(
-            width: preferences.panelLayout.panelWidth(
-                visibleProviderCount: preferences.visibleProviderOrder.count
-            ),
-            height: preferences.panelLayout.panelHeight
-        )
+        // The panel is user-resizable, so the content always fills whatever
+        // frame the window currently has instead of pinning its own size.
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: panelCornerRadius, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: panelCornerRadius, style: .continuous)
@@ -100,7 +104,7 @@ struct ContentView: View {
     }
 
     private var panelCornerRadius: Double {
-        preferences.panelLayout == .compact ? 20 : 24
+        preferences.panelLayout.cornerRadius
     }
 
     private var header: some View {
@@ -114,8 +118,16 @@ struct ContentView: View {
             Text("Quota Bar")
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white)
+                .fixedSize()
 
-            Spacer()
+            if model.hud.isServing {
+                Image(systemName: "wifi")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Color(red: 0.43, green: 0.92, blue: 0.66).opacity(0.85))
+                    .help(preferences.language.text("HUD 已开启", "HUD is on"))
+            }
+
+            Spacer(minLength: 4)
 
             Button {
                 showSettings.toggle()
@@ -161,16 +173,48 @@ struct ContentView: View {
     }
 
     private var cards: some View {
-        HStack(spacing: 10) {
-            ForEach(model.visibleSnapshots) { snapshot in
-                ProviderCard(
-                    snapshot: snapshot,
-                    language: preferences.language,
-                    installClaudeCollector: model.installClaudeCollector,
-                    manageProviders: { showProviderManager = true }
-                )
+        // The column count is derived rather than left to `.adaptive`, which
+        // would happily lay out more columns than there are services and leave
+        // an empty slot on the right. Cards share the full width and wrap onto
+        // another row as soon as the panel is narrowed.
+        GeometryReader { proxy in
+            let columns = Self.cardColumnCount(
+                availableWidth: proxy.size.width,
+                cardCount: model.visibleSnapshots.count
+            )
+            ScrollView(.vertical, showsIndicators: false) {
+                LazyVGrid(
+                    columns: Array(
+                        repeating: GridItem(.flexible(), spacing: Self.cardSpacing),
+                        count: columns
+                    ),
+                    spacing: Self.cardSpacing
+                ) {
+                    ForEach(model.visibleSnapshots) { snapshot in
+                        ProviderCard(
+                            snapshot: snapshot,
+                            language: preferences.language,
+                            quotaWindow: preferences.quotaWindow,
+                            lowQuotaThreshold: preferences.lowQuotaThreshold,
+                            installClaudeCollector: model.installClaudeCollector,
+                            manageProviders: { showProviderManager = true }
+                        )
+                    }
+                }
             }
+            .scrollBounceBehavior(.basedOnSize)
         }
+    }
+
+    static let cardSpacing: Double = 10
+    static let minimumCardWidth: Double = 164
+
+    static func cardColumnCount(availableWidth: Double, cardCount: Int) -> Int {
+        guard cardCount > 0, availableWidth > 0 else { return 1 }
+        let fits = Int(
+            (availableWidth + cardSpacing) / (minimumCardWidth + cardSpacing)
+        )
+        return max(1, min(cardCount, fits))
     }
 
     private var footer: some View {
@@ -182,11 +226,13 @@ struct ContentView: View {
                 "Local state · slows down when idle"
             ))
                 .font(.system(size: 10.5, weight: .medium))
-            Spacer()
+                .lineLimit(1)
+            Spacer(minLength: 6)
             Text(preferences.language.text("更新", "Updated") + " ")
                 .font(.system(size: 10.5, weight: .medium))
             Text(model.lastRefresh, style: .relative)
                 .font(.system(size: 10.5, weight: .medium))
+                .fixedSize()
         }
         .foregroundStyle(.white.opacity(0.4))
         .padding(.horizontal, 2)
@@ -209,7 +255,7 @@ struct ContentView: View {
             } label: {
                 Image(systemName: "chevron.down")
                     .font(.system(size: 10, weight: .bold))
-                    .frame(width: 28, height: 30)
+                    .frame(width: 28, height: 28)
             }
             .buttonStyle(HeaderButtonStyle())
             .help(preferences.language.text("展开标准视图", "Expand standard view"))
@@ -219,13 +265,16 @@ struct ContentView: View {
             } label: {
                 Image(systemName: "arrow.clockwise")
                     .font(.system(size: 10, weight: .semibold))
-                    .frame(width: 28, height: 30)
+                    .frame(width: 28, height: 28)
             }
             .buttonStyle(HeaderButtonStyle())
             .help(preferences.language.text("立即刷新", "Refresh now"))
         }
+        // Symmetric insets on every side: the row centres itself in whatever
+        // height the bar has been resized to.
         .padding(.horizontal, 10)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
 
     private func compactProvider(_ snapshot: ProviderSnapshot) -> some View {
@@ -234,32 +283,47 @@ struct ContentView: View {
             preference: preferences.quotaWindow
         )
             ?? "—"
+        let isLow = model.lowQuotaProviders.contains(snapshot.id)
         return HStack(spacing: 5) {
-            Circle()
-                .fill(compactActivityColor(snapshot.activity))
-                .frame(width: 5, height: 5)
+            BrandLogoView(
+                provider: snapshot.id,
+                size: 12,
+                dimmed: snapshot.activity == .offline
+            )
             Text(snapshot.id.title)
                 .font(.system(size: 9.5, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.62))
                 .lineLimit(1)
-            Spacer(minLength: 0)
+                .minimumScaleFactor(0.8)
+            Spacer(minLength: 2)
             Text(quota)
                 .font(.system(size: 13, weight: .bold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.94))
+                .foregroundStyle(isLow ? Color(red: 1, green: 0.45, blue: 0.42) : .white.opacity(0.94))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Circle()
+                .fill(compactActivityColor(snapshot.activity))
+                .frame(width: 5, height: 5)
         }
         .padding(.horizontal, 9)
-        .frame(maxWidth: .infinity, minHeight: 38, maxHeight: 38)
+        .frame(maxWidth: .infinity, minHeight: 34, maxHeight: 44)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.white.opacity(0.055))
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                .fill(isLow ? Color(red: 1, green: 0.35, blue: 0.32).opacity(0.14)
+                            : Color.white.opacity(0.055))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.white.opacity(0.085), lineWidth: 0.7)
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        .stroke(
+                            isLow ? Color(red: 1, green: 0.4, blue: 0.36).opacity(0.5)
+                                  : Color.white.opacity(0.085),
+                            lineWidth: 0.7
+                        )
                 }
         )
         .help(
             "\(snapshot.id.title) · "
                 + snapshot.activity.label(language: preferences.language)
+                + " · " + snapshot.detail
         )
     }
 
@@ -338,16 +402,31 @@ private struct TrafficLightButton: View {
 private struct ProviderCard: View {
     let snapshot: ProviderSnapshot
     let language: AppLanguage
+    let quotaWindow: QuotaWindowPreference
+    let lowQuotaThreshold: Int
     let installClaudeCollector: () -> Void
     let manageProviders: () -> Void
 
-    private var accent: Color {
-        switch snapshot.id {
-        case .codex: Color(red: 0.37, green: 0.83, blue: 0.67)
-        case .claude: Color(red: 0.94, green: 0.61, blue: 0.39)
-        case .kimi: Color(red: 0.55, green: 0.66, blue: 1.0)
-        case .deepseek: Color(red: 0.35, green: 0.76, blue: 0.96)
-        }
+    private var accent: Color { snapshot.id.accent }
+
+    private var showsBalance: Bool {
+        snapshot.balances.first != nil
+            && (snapshot.id == .deepseek || snapshot.limits.isEmpty)
+    }
+
+    /// The window the user asked to see, falling back to the shortest one the
+    /// provider reported.
+    private var primaryLimit: LimitWindow? {
+        QuotaWindowSelector.primary(in: snapshot.limits, preference: quotaWindow)
+    }
+
+    private var secondaryLimits: [LimitWindow] {
+        QuotaWindowSelector.secondary(in: snapshot.limits, preference: quotaWindow)
+    }
+
+    private var isLow: Bool {
+        guard lowQuotaThreshold > 0, let primaryLimit else { return false }
+        return Int(primaryLimit.clampedRemaining.rounded()) <= lowQuotaThreshold
     }
 
     private var activityColor: Color {
@@ -363,13 +442,15 @@ private struct ProviderCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 9) {
             HStack(spacing: 7) {
-                Image(systemName: snapshot.id.symbol)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(accent)
-                    .frame(width: 23, height: 23)
-                    .background(accent.opacity(0.13), in: RoundedRectangle(cornerRadius: 7))
+                BrandLogoView(
+                    provider: snapshot.id,
+                    size: 14,
+                    dimmed: snapshot.activity == .offline
+                )
+                .frame(width: 23, height: 23)
+                .background(accent.opacity(0.13), in: RoundedRectangle(cornerRadius: 7))
 
                 Text(snapshot.id.title)
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
@@ -393,111 +474,12 @@ private struct ProviderCard: View {
                 .layoutPriority(0)
             }
 
-            if
-                let balance = snapshot.balances.first,
-                snapshot.id == .deepseek || snapshot.limits.isEmpty
-            {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(alignment: .firstTextBaseline, spacing: 3) {
-                        Text(balance.compactText)
-                            .font(.system(size: 25, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                        Spacer()
-                        Text(language.text("余额", "balance"))
-                            .font(.system(size: 9.5, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.42))
-                    }
-
-                    HStack {
-                        Text(language.text("充值", "Topped up"))
-                        Spacer()
-                        Text("\(balance.symbol)\(NSDecimalNumber(decimal: balance.toppedUp).stringValue)")
-                    }
-                    HStack {
-                        Text(language.text("赠送", "Granted"))
-                        Spacer()
-                        Text("\(balance.symbol)\(NSDecimalNumber(decimal: balance.granted).stringValue)")
-                    }
-                    .padding(.top, 2)
-                }
-                .font(.system(size: 9.5, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.53))
-            } else if let primary = snapshot.limits.first {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(alignment: .firstTextBaseline, spacing: 3) {
-                        Text("\(Int(primary.clampedRemaining.rounded()))")
-                            .font(.system(size: 29, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.white)
-                        Text("%")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.55))
-                        Spacer()
-                        Text(
-                            "\(localizedLimitLabel(primary.label)) "
-                                + language.text("可用", "available")
-                        )
-                            .font(.system(size: 9.5, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.42))
-                    }
-
-                    QuotaProgress(value: primary.clampedRemaining / 100, tint: accent)
-
-                    if let resetAt = primary.resetAt {
-                        Text(resetText(resetAt))
-                            .font(.system(size: 9.5, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.42))
-                            .lineLimit(1)
-                    }
-                }
-
-                if let secondary = snapshot.limits.dropFirst().first {
-                    VStack(spacing: 5) {
-                        HStack {
-                            Text(localizedLimitLabel(secondary.label))
-                            Spacer()
-                            Text(
-                                "\(Int(secondary.clampedRemaining.rounded()))% "
-                                    + language.text("可用", "available")
-                            )
-                        }
-                        .font(.system(size: 9.5, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.53))
-                        QuotaProgress(value: secondary.clampedRemaining / 100, tint: accent)
-                    }
-                } else {
-                    Spacer(minLength: 7)
-                }
-
+            if showsBalance, let balance = snapshot.balances.first {
+                balanceBody(balance)
+            } else if let primaryLimit {
+                quotaBody(primaryLimit)
             } else {
-                VStack(alignment: .leading, spacing: 7) {
-                    Text("—")
-                        .font(.system(size: 28, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.32))
-                    Text(language.text("暂无精确额度", "No exact quota yet"))
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.4))
-
-                    if snapshot.id == .claude && snapshot.setupAvailable {
-                        Button(
-                            language.text(
-                                "配置 / 修复采集",
-                                "Configure / repair capture"
-                            ),
-                            action: installClaudeCollector
-                        )
-                            .buttonStyle(CollectorButtonStyle(tint: accent))
-                    } else if snapshot.id == .deepseek {
-                        Button(
-                            language.text("管理 DeepSeek", "Manage DeepSeek"),
-                            action: manageProviders
-                        )
-                        .buttonStyle(CollectorButtonStyle(tint: accent))
-                    } else {
-                        Spacer(minLength: 24)
-                    }
-                }
+                emptyBody
             }
 
             Spacer(minLength: 0)
@@ -509,52 +491,137 @@ private struct ProviderCard: View {
                 .truncationMode(.middle)
                 .help(snapshot.source)
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, minHeight: 174, maxHeight: 174)
+        .padding(11)
+        .frame(maxWidth: .infinity, minHeight: 168, alignment: .topLeading)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.white.opacity(0.055))
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(isLow ? Color(red: 1, green: 0.35, blue: 0.32).opacity(0.09)
+                            : Color.white.opacity(0.055))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .stroke(
-                            LinearGradient(
-                                colors: [Color.white.opacity(0.13), Color.white.opacity(0.035)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
+                            isLow
+                                ? AnyShapeStyle(Color(red: 1, green: 0.42, blue: 0.38).opacity(0.55))
+                                : AnyShapeStyle(LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(0.13),
+                                        Color.white.opacity(0.035)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )),
                             lineWidth: 0.75
                         )
                 }
         )
     }
 
-    private func resetText(_ date: Date) -> String {
-        let interval = date.timeIntervalSinceNow
-        guard interval > 0 else {
-            return language.text("额度窗口正在重置", "Quota window is resetting")
+    private func balanceBody(_ balance: AccountBalance) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text(balance.compactText)
+                    .font(.system(size: 25, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Spacer(minLength: 2)
+                Text(language.text("余额", "balance"))
+                    .font(.system(size: 9.5, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.42))
+            }
+
+            HStack {
+                Text(language.text("充值", "Topped up"))
+                Spacer()
+                Text("\(balance.symbol)\(NSDecimalNumber(decimal: balance.toppedUp).stringValue)")
+            }
+            HStack {
+                Text(language.text("赠送", "Granted"))
+                Spacer()
+                Text("\(balance.symbol)\(NSDecimalNumber(decimal: balance.granted).stringValue)")
+            }
+            .padding(.top, 2)
         }
-        if interval < 3_600 {
-            let minutes = max(1, Int(interval / 60))
-            return language.text(
-                "\(minutes) 分钟后重置",
-                "Resets in \(minutes) min"
-            )
+        .font(.system(size: 9.5, weight: .semibold))
+        .foregroundStyle(.white.opacity(0.53))
+    }
+
+    private func quotaBody(_ primary: LimitWindow) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                    Text("\(Int(primary.clampedRemaining.rounded()))")
+                        .font(.system(size: 29, weight: .semibold, design: .rounded))
+                        .foregroundStyle(isLow ? Color(red: 1, green: 0.5, blue: 0.46) : .white)
+                    Text("%")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.55))
+                    Spacer(minLength: 2)
+                    Text(
+                        "\(localizedLimitLabel(primary.label)) "
+                            + language.text("可用", "available")
+                    )
+                        .font(.system(size: 9.5, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.42))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                }
+
+                QuotaProgress(
+                    value: primary.clampedRemaining / 100,
+                    tint: isLow ? Color(red: 1, green: 0.42, blue: 0.38) : accent
+                )
+
+                if let reset = primary.resetText(language: language) {
+                    Text(reset)
+                        .font(.system(size: 9.5, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.42))
+                        .lineLimit(1)
+                }
+            }
+
+            ForEach(secondaryLimits.prefix(2)) { secondary in
+                VStack(spacing: 5) {
+                    HStack {
+                        Text(localizedLimitLabel(secondary.label))
+                        Spacer(minLength: 2)
+                        Text(
+                            "\(Int(secondary.clampedRemaining.rounded()))% "
+                                + language.text("可用", "available")
+                        )
+                    }
+                    .font(.system(size: 9.5, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.53))
+                    .lineLimit(1)
+                    QuotaProgress(value: secondary.clampedRemaining / 100, tint: accent)
+                }
+            }
         }
-        if interval < 86_400 {
-            let hours = Int(interval / 3_600)
-            let minutes = Int(interval.truncatingRemainder(dividingBy: 3_600) / 60)
-            return language.text(
-                minutes > 0 ? "\(hours) 小时 \(minutes) 分后重置" : "\(hours) 小时后重置",
-                minutes > 0 ? "Resets in \(hours)h \(minutes)m" : "Resets in \(hours)h"
-            )
+    }
+
+    private var emptyBody: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text("—")
+                .font(.system(size: 28, weight: .medium, design: .rounded))
+                .foregroundStyle(.white.opacity(0.32))
+            Text(language.text("暂无精确额度", "No exact quota yet"))
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.4))
+
+            if snapshot.id == .claude && snapshot.setupAvailable {
+                Button(
+                    language.text("配置 / 修复采集", "Configure / repair capture"),
+                    action: installClaudeCollector
+                )
+                    .buttonStyle(CollectorButtonStyle(tint: accent))
+            } else if snapshot.id == .deepseek {
+                Button(
+                    language.text("管理 DeepSeek", "Manage DeepSeek"),
+                    action: manageProviders
+                )
+                .buttonStyle(CollectorButtonStyle(tint: accent))
+            }
         }
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: language == .chinese ? "zh_CN" : "en_US")
-        formatter.dateFormat = language == .chinese ? "M月d日 HH:mm" : "MMM d, HH:mm"
-        return language.text(
-            "\(formatter.string(from: date)) 重置",
-            "Resets \(formatter.string(from: date))"
-        )
     }
 
     private func localizedLimitLabel(_ label: String) -> String {
@@ -579,24 +646,30 @@ private struct ProviderCard: View {
 private struct SettingsOverlay: View {
     @ObservedObject var model: AppModel
     @ObservedObject private var preferences: AppPreferences
+    @ObservedObject private var hud: HUDBridge
     @Binding var isPresented: Bool
     @Binding var showProviderManager: Bool
+    let onResetGeometry: () -> Void
+    @State private var copiedHUDURL = false
 
     init(
         model: AppModel,
         isPresented: Binding<Bool>,
-        showProviderManager: Binding<Bool>
+        showProviderManager: Binding<Bool>,
+        onResetGeometry: @escaping () -> Void
     ) {
         self.model = model
         _preferences = ObservedObject(wrappedValue: model.preferences)
+        _hud = ObservedObject(wrappedValue: model.hud)
         _isPresented = isPresented
         _showProviderManager = showProviderManager
+        self.onResetGeometry = onResetGeometry
     }
 
     private var language: AppLanguage { preferences.language }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(language.text("设置", "Settings"))
@@ -627,83 +700,23 @@ private struct SettingsOverlay: View {
                 .buttonStyle(HeaderButtonStyle())
             }
 
-            settingRow(
-                title: language.text("语言", "Language"),
-                detail: language.text("界面语言立即切换", "Changes immediately")
-            ) {
-                Picker("", selection: $preferences.language) {
-                    ForEach(AppLanguage.allCases) { item in
-                        Text(item.nativeName).tag(item)
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .frame(width: 170)
-                .onChange(of: preferences.language) { _, _ in
-                    model.preferencesChanged(languageChanged: true)
-                }
-            }
-
-            settingRow(
-                title: language.text("刷新频率", "Refresh interval"),
-                detail: refreshDetail
-            ) {
-                HStack(spacing: 7) {
-                    Picker("", selection: $preferences.refreshMode) {
-                        ForEach(RefreshMode.allCases) { mode in
-                            Text(mode.label(language: language)).tag(mode)
-                        }
-                    }
-                    .labelsHidden()
-                    .frame(width: preferences.refreshMode == .custom ? 125 : 265)
-                    .onChange(of: preferences.refreshMode) { _, _ in
-                        model.preferencesChanged(languageChanged: false)
-                    }
-
-                    if preferences.refreshMode == .custom {
-                        TextField(
-                            "",
-                            value: customSecondsBinding,
-                            format: .number
-                        )
-                        .multilineTextAlignment(.trailing)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 68)
-
-                        Text(language.text("秒", "sec"))
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.55))
-                    }
+            // Two columns on a normally sized panel, one when it is narrow, so
+            // the settings still fit without scrolling at the default height.
+            ScrollView(.vertical, showsIndicators: false) {
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 330), spacing: 8)],
+                    alignment: .leading,
+                    spacing: 8
+                ) {
+                    languageRow
+                    refreshRow
+                    summaryRow
+                    warningRow
+                    layoutRow
+                    hudRow
                 }
             }
-
-            settingRow(
-                title: language.text("摘要显示", "Summary display"),
-                detail: language.text(
-                    "额度窗口 · 顶部栏显示方式",
-                    "Quota window · menu bar display"
-                )
-            ) {
-                HStack(spacing: 8) {
-                    Picker("", selection: $preferences.quotaWindow) {
-                        ForEach(QuotaWindowPreference.allCases) { window in
-                            Text(window.label(language: language)).tag(window)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.segmented)
-                    .frame(width: 150)
-
-                    Picker("", selection: $preferences.menuBarDisplayMode) {
-                        ForEach(MenuBarDisplayMode.allCases) { mode in
-                            Text(mode.label(language: language)).tag(mode)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.segmented)
-                    .frame(width: 190)
-                }
-            }
+            .scrollBounceBehavior(.basedOnSize)
 
             HStack(spacing: 7) {
                 Image(systemName: "leaf.fill")
@@ -714,20 +727,237 @@ private struct SettingsOverlay: View {
                 ))
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(.white.opacity(0.5))
+                    .lineLimit(2)
             }
-            .padding(.top, 2)
         }
-        .padding(16)
+        .padding(15)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(Color(red: 0.075, green: 0.085, blue: 0.105).opacity(0.97))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
                 }
         )
         .shadow(color: .black.opacity(0.42), radius: 20, y: 8)
+    }
+
+    private var languageRow: some View {
+        settingRow(
+            title: language.text("语言", "Language"),
+            detail: language.text("界面语言立即切换", "Changes immediately")
+        ) {
+            Picker("", selection: $preferences.language) {
+                ForEach(AppLanguage.allCases) { item in
+                    Text(item.nativeName).tag(item)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.segmented)
+            .frame(width: 140)
+            .onChange(of: preferences.language) { _, _ in
+                model.preferencesChanged(languageChanged: true)
+            }
+        }
+    }
+
+    private var refreshRow: some View {
+        settingRow(
+            title: language.text("刷新频率", "Refresh interval"),
+            detail: refreshDetail
+        ) {
+            HStack(spacing: 7) {
+                Picker("", selection: $preferences.refreshMode) {
+                    ForEach(RefreshMode.allCases) { mode in
+                        Text(mode.label(language: language)).tag(mode)
+                    }
+                }
+                .labelsHidden()
+                .frame(width: preferences.refreshMode == .custom ? 108 : 216)
+                .onChange(of: preferences.refreshMode) { _, _ in
+                    model.preferencesChanged(languageChanged: false)
+                }
+
+                if preferences.refreshMode == .custom {
+                    TextField("", value: customSecondsBinding, format: .number)
+                        .multilineTextAlignment(.trailing)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 62)
+
+                    Text(language.text("秒", "sec"))
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.55))
+                }
+            }
+        }
+    }
+
+    private var summaryRow: some View {
+        settingRow(
+            title: language.text("摘要显示", "Summary display"),
+            detail: language.text(
+                "额度窗口 · 顶部栏显示方式",
+                "Quota window · menu bar display"
+            )
+        ) {
+            HStack(spacing: 8) {
+                Picker("", selection: $preferences.quotaWindow) {
+                    ForEach(QuotaWindowPreference.allCases) { window in
+                        Text(window.label(language: language)).tag(window)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .frame(width: 120)
+
+                Picker("", selection: $preferences.menuBarDisplayMode) {
+                    ForEach(MenuBarDisplayMode.allCases) { mode in
+                        Text(mode.label(language: language)).tag(mode)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .frame(width: 152)
+            }
+        }
+    }
+
+    private var warningRow: some View {
+        settingRow(
+            title: language.text("低额度提醒", "Low-quota warning"),
+            detail: language.text(
+                "低于阈值时卡片和单行都会变红",
+                "Cards and the one-line bar turn red below this"
+            )
+        ) {
+            Picker("", selection: $preferences.lowQuotaThreshold) {
+                Text(language.text("关闭", "Off")).tag(0)
+                ForEach([5, 10, 20, 30], id: \.self) { value in
+                    Text("\(value)%").tag(value)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.segmented)
+            .frame(width: 200)
+        }
+    }
+
+    private var layoutRow: some View {
+        settingRow(
+            title: language.text("浮窗尺寸", "Panel size"),
+            detail: language.text(
+                "拖拽浮窗边缘即可调整宽高，靠近屏幕边缘会自动贴边",
+                "Drag any edge to resize; the panel snaps to screen edges"
+            )
+        ) {
+            Button(language.text("恢复默认大小与位置", "Reset size & position")) {
+                onResetGeometry()
+            }
+            .buttonStyle(CollectorButtonStyle(tint: Color(red: 0.55, green: 0.66, blue: 1)))
+        }
+    }
+
+    private var hudRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(language.text("HUD 外接屏", "HUD display"))
+                        .font(.system(size: 11.5, weight: .semibold))
+                    Text(language.text(
+                        "在备用手机或 ESP32 上显示额度，只读、不出局域网",
+                        "Show quotas on a spare phone or an ESP32 — read-only, LAN only"
+                    ))
+                    .font(.system(size: 9.5, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.4))
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 8)
+                Toggle("", isOn: $preferences.hudEnabled)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .onChange(of: preferences.hudEnabled) { _, _ in
+                        model.preferencesChanged(languageChanged: false)
+                    }
+            }
+
+            if preferences.hudEnabled {
+                HStack(spacing: 8) {
+                    Text(language.text("端口", "Port"))
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.55))
+                    TextField("", value: hudPortBinding, format: .number.grouping(.never))
+                        .multilineTextAlignment(.trailing)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 70)
+
+                    Toggle(isOn: $preferences.hudAllowsLAN) {
+                        Text(language.text("允许局域网访问", "Allow LAN access"))
+                            .font(.system(size: 10, weight: .semibold))
+                    }
+                    .toggleStyle(.checkbox)
+                    .onChange(of: preferences.hudAllowsLAN) { _, _ in
+                        model.preferencesChanged(languageChanged: false)
+                    }
+
+                    Spacer(minLength: 4)
+
+                    Button(language.text("换新令牌", "New token")) {
+                        _ = preferences.regenerateHUDToken()
+                        model.preferencesChanged(languageChanged: false)
+                        copiedHUDURL = false
+                    }
+                    .buttonStyle(CollectorButtonStyle(tint: .orange))
+                }
+
+                HStack(spacing: 8) {
+                    Text(hud.hudURL(preferences: preferences)
+                        ?? hudStatusPlaceholder)
+                        .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .textSelection(.enabled)
+                    Spacer(minLength: 4)
+                    if let url = hud.hudURL(preferences: preferences) {
+                        Button(copiedHUDURL
+                            ? language.text("已复制", "Copied")
+                            : language.text("复制网址", "Copy URL")) {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(url, forType: .string)
+                            copiedHUDURL = true
+                        }
+                        .buttonStyle(CollectorButtonStyle(
+                            tint: Color(red: 0.43, green: 0.92, blue: 0.66)
+                        ))
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 11)
+        .padding(.vertical, 9)
+        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 11))
+    }
+
+    private var hudStatusPlaceholder: String {
+        switch hud.state {
+        case .failed(let message):
+            language.text("HUD 启动失败：\(message)", "HUD failed: \(message)")
+        case .starting:
+            language.text("正在启动…", "Starting…")
+        default:
+            language.text("未启动", "Not running")
+        }
+    }
+
+    private var hudPortBinding: Binding<Int> {
+        Binding(
+            get: { preferences.hudPort },
+            set: { newValue in
+                preferences.hudPort = min(max(newValue, 1_024), 65_535)
+                model.preferencesChanged(languageChanged: false)
+            }
+        )
     }
 
     private var customSecondsBinding: Binding<Int> {
@@ -758,19 +988,29 @@ private struct SettingsOverlay: View {
         detail: String,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 11.5, weight: .semibold))
-                Text(detail)
-                    .font(.system(size: 9.5, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.4))
+        let label = VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.system(size: 11.5, weight: .semibold))
+            Text(detail)
+                .font(.system(size: 9.5, weight: .medium))
+                .foregroundStyle(.white.opacity(0.4))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        // Side by side while there is room, stacked once the panel narrows.
+        return ViewThatFits(in: .horizontal) {
+            HStack {
+                label
+                Spacer(minLength: 8)
+                content()
             }
-            Spacer()
-            content()
+            VStack(alignment: .leading, spacing: 7) {
+                label
+                content()
+            }
         }
         .padding(.horizontal, 11)
         .padding(.vertical, 9)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 11))
     }
 }
@@ -815,25 +1055,28 @@ private struct ProviderManagerOverlay: View {
             }
 
             HStack(alignment: .top, spacing: 12) {
-                VStack(spacing: 6) {
-                    ForEach(Array(preferences.providerOrder.enumerated()), id: \.element) {
-                        index, provider in
-                        providerRow(provider, index: index)
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 6) {
+                        ForEach(Array(preferences.providerOrder.enumerated()), id: \.element) {
+                            index, provider in
+                            providerRow(provider, index: index)
+                        }
                     }
                 }
+                .scrollBounceBehavior(.basedOnSize)
                 .frame(maxWidth: .infinity)
 
                 deepSeekSetup
-                    .frame(width: 330)
+                    .frame(width: 300)
             }
         }
-        .padding(16)
+        .padding(15)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(Color(red: 0.075, green: 0.085, blue: 0.105).opacity(0.98))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
                 }
         )
@@ -844,14 +1087,12 @@ private struct ProviderManagerOverlay: View {
         let isHidden = preferences.hiddenProviders.contains(provider)
         let isPaused = preferences.pausedProviders.contains(provider)
         return HStack(spacing: 7) {
-            Image(systemName: provider.symbol)
-                .font(.system(size: 10, weight: .semibold))
+            BrandLogoView(provider: provider, size: 13, dimmed: isHidden)
                 .frame(width: 20)
-                .foregroundStyle(.white.opacity(isHidden ? 0.28 : 0.72))
             Text(provider.title)
                 .font(.system(size: 10.5, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white.opacity(isHidden ? 0.35 : 0.82))
-            Spacer()
+            Spacer(minLength: 2)
             Button {
                 let willHide = !isHidden
                 preferences.setProvider(provider, hidden: willHide)
@@ -910,8 +1151,7 @@ private struct ProviderManagerOverlay: View {
     private var deepSeekSetup: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Image(systemName: ProviderID.deepseek.symbol)
-                    .foregroundStyle(Color(red: 0.35, green: 0.76, blue: 0.96))
+                BrandLogoView(provider: .deepseek, size: 14)
                 Text("DeepSeek")
                     .font(.system(size: 11.5, weight: .semibold, design: .rounded))
                 Spacer()
@@ -951,9 +1191,7 @@ private struct ProviderManagerOverlay: View {
                         ? language.text("验证中…", "Checking…")
                         : language.text("保存并验证", "Save & verify"))
                 }
-                .buttonStyle(CollectorButtonStyle(
-                    tint: Color(red: 0.35, green: 0.76, blue: 0.96)
-                ))
+                .buttonStyle(CollectorButtonStyle(tint: ProviderID.deepseek.accent))
                 .disabled(isSaving || apiKey.isEmpty)
 
                 if model.deepSeekKeyConfigured {

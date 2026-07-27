@@ -110,7 +110,8 @@ actor CodexUsageClient {
                     id: "account-\(id)-\(minutes)",
                     label: windowLabel(minutes: minutes, language: language),
                     remainingPercent: 100 - used,
-                    resetAt: resetAt
+                    resetAt: resetAt,
+                    windowMinutes: minutes > 0 ? minutes : nil
                 )
             )
         }
@@ -119,7 +120,11 @@ actor CodexUsageClient {
         let plan = (rateLimits["planType"] as? String ?? "")
             .replacingOccurrences(of: "_", with: " ")
             .capitalized
-        return UsageResult(limits: limits, fetchedAt: fetchedAt, plan: plan)
+        return UsageResult(
+            limits: QuotaWindowSelector.ordered(limits),
+            fetchedAt: fetchedAt,
+            plan: plan
+        )
     }
 
     private nonisolated static func windowLabel(
@@ -191,7 +196,7 @@ actor CodexUsageClient {
                     "clientInfo": [
                         "name": "quota-bar",
                         "title": "Quota Bar",
-                        "version": "1.2.6"
+                        "version": AppVersion.short
                     ],
                     "capabilities": ["experimentalApi": true]
                 ]

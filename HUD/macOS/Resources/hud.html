@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0b0d12">
+<title>Quota Bar HUD</title>
+<style>
+:root{
+  --bg:#0b0d12; --card:rgba(255,255,255,.055); --line:rgba(255,255,255,.09);
+  --ink:rgba(255,255,255,.95); --dim:rgba(255,255,255,.45); --faint:rgba(255,255,255,.28);
+  --ok:#6ee7a4; --warn:#ffb63f; --bad:#ff6b6b;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font:500 16px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",system-ui,sans-serif;
+  padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right))
+          max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+  display:flex;flex-direction:column;gap:12px;overflow:hidden;
+}
+header{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+header h1{font-size:13px;font-weight:700;letter-spacing:.4px;margin:0;opacity:.8}
+header .spacer{flex:1}
+.pill{
+  display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;
+  color:var(--dim);background:var(--card);border:1px solid var(--line);
+  border-radius:999px;padding:4px 10px;
+}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--faint);flex:0 0 auto}
+.dot.live{background:var(--ok);box-shadow:0 0 8px rgba(110,231,164,.65)}
+.dot.stale{background:var(--warn)}
+.dot.down{background:var(--bad)}
+main{
+  flex:1 1 auto;display:grid;gap:10px;min-height:0;overflow-y:auto;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  /* Rows hug their content and the whole grid centres, so two services do
+     not stretch into two full-height columns. */
+  grid-auto-rows:min-content;align-content:center;
+}
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:18px;
+  padding:12px 13px;display:flex;flex-direction:column;gap:8px;min-height:0;
+  position:relative;overflow:hidden;
+}
+.card.low{border-color:rgba(255,107,107,.5);background:rgba(255,107,107,.08)}
+.card.off{opacity:.5}
+.card .top{display:flex;align-items:center;gap:7px}
+.card .name{font-size:12px;font-weight:700;letter-spacing:.2px;opacity:.85}
+.card .state{
+  margin-left:auto;display:inline-flex;align-items:center;gap:5px;
+  font-size:10px;font-weight:600;color:var(--dim);white-space:nowrap;
+}
+.card .value{display:flex;align-items:baseline;gap:3px;margin-top:2px}
+.card .value b{font-size:34px;font-weight:650;letter-spacing:-1px;line-height:1}
+.card .value span{font-size:13px;font-weight:600;color:var(--dim)}
+.bar{height:6px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;transition:width .5s ease}
+.meta{font-size:10.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta.reset{color:var(--dim)}
+svg.mark{width:18px;height:18px;flex:0 0 auto}
+footer{flex:0 0 auto;display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--faint)}
+footer .spacer{flex:1}
+button{
+  font:inherit;font-size:11px;font-weight:600;color:var(--dim);background:var(--card);
+  border:1px solid var(--line);border-radius:999px;padding:5px 11px;cursor:pointer;
+}
+button:active{color:var(--ink)}
+.empty{
+  grid-column:1/-1;display:flex;flex-direction:column;gap:10px;align-items:center;
+  justify-content:center;text-align:center;color:var(--dim);font-size:13px;padding:24px;
+}
+.empty input{
+  font:inherit;font-size:13px;text-align:center;color:var(--ink);background:var(--card);
+  border:1px solid var(--line);border-radius:10px;padding:9px 12px;width:min(280px,80vw);
+}
+@media (max-width:430px){
+  main{grid-template-columns:repeat(2,1fr)}
+  .card .value b{font-size:28px}
+}
+@media (orientation:landscape) and (max-height:460px){
+  main{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
+  .card{padding:9px 10px;gap:6px;border-radius:14px}
+  .card .value b{font-size:26px}
+}
+</style>
+</head>
+<body>
+<header>
+  <span class="dot" id="live"></span>
+  <h1>QUOTA BAR</h1>
+  <span class="spacer"></span>
+  <span class="pill" id="window">—</span>
+  <span class="pill" id="age">—</span>
+</header>
+<main id="grid"></main>
+<footer>
+  <span id="host">—</span>
+  <span class="spacer"></span>
+  <button id="wake" type="button">Keep awake</button>
+  <button id="full" type="button">Fullscreen</button>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var params = new URLSearchParams(location.search);
+  var token = params.get("token") || localStorage.getItem("quotabar.token") || "";
+  if (params.get("token")) localStorage.setItem("quotabar.token", token);
+  var interval = Math.max(2, parseInt(params.get("every") || "5", 10)) * 1000;
+
+  var grid = document.getElementById("grid");
+  var live = document.getElementById("live");
+  var ageEl = document.getElementById("age");
+  var windowEl = document.getElementById("window");
+  var hostEl = document.getElementById("host");
+  var lastOk = 0;
+  var lastPayload = null;
+
+  var MARKS = {
+    codex: function (c) {
+      var rings = "";
+      for (var i = 0; i < 3; i++) {
+        rings += '<rect x="6.5" y="1.5" width="7" height="17" rx="3.5" fill="none" ' +
+          'stroke="' + c + '" stroke-width="2" transform="rotate(' + (i * 60) + ' 10 10)"/>';
+      }
+      return rings;
+    },
+    claude: function (c) {
+      var rays = "";
+      for (var i = 0; i < 12; i++) {
+        var len = i % 2 === 0 ? 8.4 : 7.1;
+        rays += '<line x1="10" y1="10" x2="10" y2="' + (10 - len) + '" stroke="' + c +
+          '" stroke-width="1.7" stroke-linecap="round" transform="rotate(' + (i * 30) + ' 10 10)"/>';
+      }
+      return rays;
+    },
+    kimi: function (c) {
+      return '<path d="M13.9 2.2a8.6 8.6 0 1 0 0 15.6A9.8 9.8 0 0 1 13.9 2.2Z" fill="' + c + '"/>' +
+        '<path d="M17.4 2.2c.4 1.6.9 2.1 2.5 2.5-1.6.4-2.1.9-2.5 2.5-.4-1.6-.9-2.1-2.5-2.5 1.6-.4 2.1-.9 2.5-2.5Z" fill="' + c + '"/>';
+    },
+    deepseek: function (c) {
+      return '<path d="M1 11.1C2.4 7.4 5.6 5.6 10 5.7c2 .1 3.3.8 4.3 2.1l4.8-4.4c-.2 3.2-.6 5.3-1.8 6.7 1 2 1.6 4.2 1.8 6.8l-5.2-4.6c-3.9 3.2-9.2 2.7-12.9-1.2Z" fill="' + c + '"/>' +
+        '<path d="M6.1 4.1c0-1.4.8-2.7 1.8-3.6.1 1.2 0 2.4-.8 3.8Z" fill="' + c + '"/>';
+    },
+    grok: function (c) {
+      return '<g fill="' + c + '">' +
+        '<path d="M14.7.9h5L5.3 19.1h-5z"/>' +
+        '<path d="M.3.9h5l5 6H5.1z"/>' +
+        '<path d="M9.9 13.1h5l5 6h-5z"/></g>';
+    },
+    gemini: function (c) {
+      return '<path d="M10 0c.7 5.2 4.1 8.6 10 10-5.9 1.4-9.3 4.8-10 10-.7-5.2-4.1-8.6-10-10C5.9 8.6 9.3 5.2 10 0Z" fill="' + c + '"/>';
+    }
+  };
+
+  function mark(id, colour) {
+    var draw = MARKS[id];
+    if (!draw) {
+      return '<svg class="mark" viewBox="0 0 20 20"><circle cx="10" cy="10" r="6" fill="' +
+        colour + '"/></svg>';
+    }
+    return '<svg class="mark" viewBox="0 0 20 20">' + draw(colour) + "</svg>";
+  }
+
+  function tone(percent, threshold) {
+    if (percent === null || percent === undefined) return "var(--dim)";
+    if (threshold > 0 && percent <= threshold) return "var(--bad)";
+    if (percent <= 25) return "var(--warn)";
+    return "var(--ok)";
+  }
+
+  function askForToken(message) {
+    grid.innerHTML =
+      '<div class="empty"><div>' + message + "</div>" +
+      '<input id="tokenInput" placeholder="access token" autocapitalize="off" ' +
+      'autocorrect="off" spellcheck="false" value="' + token.replace(/"/g, "") + '">' +
+      '<button id="tokenSave" type="button">Connect</button></div>';
+    document.getElementById("tokenSave").onclick = function () {
+      token = document.getElementById("tokenInput").value.trim();
+      localStorage.setItem("quotabar.token", token);
+      tick();
+    };
+  }
+
+  function render(data) {
+    lastPayload = data;
+    windowEl.textContent = data.quotaWindow === "weekly" ? "7 days" : "5 hours";
+    hostEl.textContent = data.host + " · Quota Bar " + data.version;
+
+    if (!data.providers.length) {
+      grid.innerHTML = '<div class="empty">No visible services.<br>Turn one on in Model management.</div>';
+      return;
+    }
+
+    grid.innerHTML = data.providers.map(function (p) {
+      var colour = p.accent || "#8aa";
+      var percent = (p.percent === null || p.percent === undefined) ? null : p.percent;
+      var low = percent !== null && data.lowQuotaThreshold > 0 && percent <= data.lowQuotaThreshold;
+      var reset = (p.limits[0] && p.limits[0].resetText) || "";
+      var headline = p.headline || "—";
+      var suffix = "";
+      if (/^\d+%$/.test(headline)) { headline = headline.slice(0, -1); suffix = "%"; }
+
+      return '<div class="card' + (low ? " low" : "") + (p.state === "offline" ? " off" : "") + '">' +
+        '<div class="top">' + mark(p.id, colour) +
+          '<span class="name">' + p.title + "</span>" +
+          '<span class="state"><i class="dot' + (p.isActive ? " live" : "") + '"></i>' +
+            p.stateLabel + "</span>" +
+        "</div>" +
+        '<div class="value"><b style="color:' + (low ? "var(--bad)" : "var(--ink)") + '">' +
+          headline + "</b><span>" + suffix + "</span></div>" +
+        (percent === null ? "" :
+          '<div class="bar"><i style="width:' + Math.max(2, percent) + "%;background:" +
+          tone(percent, data.lowQuotaThreshold) + '"></i></div>') +
+        '<div class="meta reset">' + (reset || "&nbsp;") + "</div>" +
+        '<div class="meta">' + (p.detail || "") + "</div>" +
+      "</div>";
+    }).join("");
+  }
+
+  function tick() {
+    var url = "/api/status" + (token ? "?token=" + encodeURIComponent(token) : "");
+    fetch(url, { cache: "no-store" }).then(function (response) {
+      if (response.status === 401) {
+        live.className = "dot down";
+        askForToken("This HUD needs the access token shown in Quota Bar settings.");
+        return null;
+      }
+      if (!response.ok) throw new Error(response.status);
+      return response.json();
+    }).then(function (data) {
+      if (!data) return;
+      lastOk = Date.now();
+      live.className = "dot live";
+      render(data);
+    }).catch(function () {
+      live.className = Date.now() - lastOk > 30000 ? "dot down" : "dot stale";
+      if (!lastPayload) {
+        grid.innerHTML = '<div class="empty">Waiting for Quota Bar…<br>' +
+          "Check that the HUD is on and both devices share a network.</div>";
+      }
+    });
+  }
+
+  function updateAge() {
+    if (!lastOk) { ageEl.textContent = "—"; return; }
+    var seconds = Math.round((Date.now() - lastOk) / 1000);
+    ageEl.textContent = seconds < 60 ? seconds + "s ago" : Math.round(seconds / 60) + "m ago";
+  }
+
+  var wakeLock = null;
+  document.getElementById("wake").onclick = function () {
+    var button = this;
+    if (wakeLock) {
+      wakeLock.release();
+      wakeLock = null;
+      button.textContent = "Keep awake";
+      return;
+    }
+    if (!navigator.wakeLock) { button.textContent = "Not supported"; return; }
+    navigator.wakeLock.request("screen").then(function (lock) {
+      wakeLock = lock;
+      button.textContent = "Staying awake";
+      lock.addEventListener("release", function () {
+        wakeLock = null;
+        button.textContent = "Keep awake";
+      });
+    }).catch(function () { button.textContent = "Denied"; });
+  };
+
+  document.getElementById("full").onclick = function () {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen();
+    }
+  };
+
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) tick();
+  });
+
+  tick();
+  setInterval(tick, interval);
+  setInterval(updateAge, 1000);
+})();
+</script>
+</body>
+</html>

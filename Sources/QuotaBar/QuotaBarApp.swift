@@ -8,19 +8,44 @@ final class FloatingPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 
+    /// How close an edge has to be before the panel jumps flush against it.
+    private let snapDistance: CGFloat = 14
+
     override func constrainFrameRect(
         _ frameRect: NSRect,
         to screen: NSScreen?
     ) -> NSRect {
-        guard let bounds = screen?.visibleFrame else { return frameRect }
+        let target = screen
+            ?? NSScreen.screens.first { $0.frame.intersects(frameRect) }
+            ?? NSScreen.main
+        guard let target else { return frameRect }
+
+        // AppKit would otherwise keep a titled window below the menu bar, which
+        // is exactly what stops the panel reaching the top of the display.
+        let full = target.frame
+        let visible = target.visibleFrame
         var frame = frameRect
+
+        let candidateX: [CGFloat] = [full.minX, visible.minX, visible.maxX - frame.width, full.maxX - frame.width]
+        for candidate in candidateX where abs(frame.minX - candidate) < snapDistance {
+            frame.origin.x = candidate
+            break
+        }
+        let candidateY: [CGFloat] = [full.minY, visible.minY, visible.maxY - frame.height, full.maxY - frame.height]
+        for candidate in candidateY where abs(frame.origin.y - candidate) < snapDistance {
+            frame.origin.y = candidate
+            break
+        }
+
+        // Stay fully on the display, but allow every edge including the strip
+        // behind the menu bar.
         frame.origin.x = min(
-            max(frame.origin.x, bounds.minX),
-            max(bounds.minX, bounds.maxX - frame.width)
+            max(frame.origin.x, full.minX),
+            max(full.minX, full.maxX - frame.width)
         )
         frame.origin.y = min(
-            max(frame.origin.y, bounds.minY),
-            max(bounds.minY, bounds.maxY - frame.height)
+            max(frame.origin.y, full.minY),
+            max(full.minY, full.maxY - frame.height)
         )
         return frame
     }
@@ -156,10 +181,14 @@ final class MenuBarMarqueeView: NSView {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelegate {
     private let model = AppModel()
     private var panel: FloatingPanel?
+    /// Set while the app itself is moving the panel so programmatic layout
+    /// changes are not mistaken for the user repositioning it.
+    private var isAdjustingPanel = false
     private var hostingView: NSHostingView<ContentView>?
+    private var panelContainer: NSView?
     private var statusItem: NSStatusItem?
     private var statusMenu: NSMenu?
     private var toggleMenuItem: NSMenuItem?
@@ -175,6 +204,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var providerOrderObservation: AnyCancellable?
     private var hiddenProvidersObservation: AnyCancellable?
     private var menuBarDisplayObservation: AnyCancellable?
+    private var lowQuotaObservation: AnyCancellable?
     private var marqueeView: MenuBarMarqueeView?
     private var screenParametersObserver: NSObjectProtocol?
     private var hotKeyRef: EventHotKeyRef?
@@ -217,15 +247,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func makePanel() {
-        let size = NSSize(
-            width: model.preferences.panelLayout.panelWidth(
-                visibleProviderCount: model.preferences.visibleProviderOrder.count
-            ),
-            height: model.preferences.panelLayout.panelHeight
+        let mode = model.preferences.panelLayout
+        let size = mode.clamp(
+            model.preferences.savedPanelSize(for: mode)
+                ?? mode.defaultSize(
+                    visibleProviderCount: model.preferences.visibleProviderOrder.count
+                )
         )
         let panel = FloatingPanel(
             contentRect: NSRect(origin: .zero, size: size),
-            styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel],
+            styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel, .resizable],
             backing: .buffered,
             defer: false
         )
@@ -235,7 +266,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
-        panel.level = .floating
+        // Above the menu bar so the panel stays readable when it is snapped to
+        // the very top of the display.
+        panel.level = .statusBar
         panel.isFloatingPanel = true
         panel.hidesOnDeactivate = false
         panel.isMovableByWindowBackground = true
@@ -243,25 +276,59 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         panel.standardWindowButton(.closeButton)?.isHidden = true
         panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
         panel.standardWindowButton(.zoomButton)?.isHidden = true
+        panel.minSize = mode.minSize
+        panel.maxSize = mode.maxSize
+        panel.delegate = self
         let hostingView = NSHostingView(
-            rootView: ContentView(model: model, onHideToMenuBar: { [weak self] in
-                self?.collapsePanel()
-            })
-        )
-        hostingView.wantsLayer = true
-        hostingView.layer?.cornerRadius = 24
-        hostingView.layer?.cornerCurve = .continuous
-        hostingView.layer?.masksToBounds = true
-        panel.contentView = hostingView
-        self.hostingView = hostingView
-
-        if let screen = NSScreen.main {
-            let visible = screen.visibleFrame
-            let origin = NSPoint(
-                x: visible.maxX - size.width - 24,
-                y: visible.maxY - size.height
+            rootView: ContentView(
+                model: model,
+                onHideToMenuBar: { [weak self] in self?.collapsePanel() },
+                onResetGeometry: { [weak self] in self?.resetPanelGeometry() }
             )
-            panel.setFrameOrigin(origin)
+        )
+        // A titled window hands SwiftUI a titlebar-sized top safe area, which
+        // is what pushed the one-line bar's content off centre.
+        hostingView.safeAreaRegions = []
+        hostingView.sizingOptions = []
+
+        // The hosting view deliberately is *not* the window's contentView. As
+        // the contentView of a resizable window it mirrors the SwiftUI content's
+        // min/max size onto the window, and measuring a root that contains a
+        // ScrollView re-enters the constraint pass — which AppKit turns into a
+        // fatal exception. A plain container sidesteps that; the panel already
+        // sets its own size limits.
+        let container = NSView(frame: NSRect(origin: .zero, size: size))
+        container.wantsLayer = true
+        container.layer?.cornerRadius = mode.cornerRadius
+        container.layer?.cornerCurve = .continuous
+        container.layer?.masksToBounds = true
+        hostingView.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(hostingView)
+        NSLayoutConstraint.activate([
+            hostingView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            hostingView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            hostingView.topAnchor.constraint(equalTo: container.topAnchor),
+            hostingView.bottomAnchor.constraint(equalTo: container.bottomAnchor)
+        ])
+        panel.contentView = container
+        self.hostingView = hostingView
+        self.panelContainer = container
+
+        if let topLeft = model.preferences.savedPanelTopLeft() {
+            panel.setFrame(
+                NSRect(
+                    x: topLeft.x,
+                    y: topLeft.y - size.height,
+                    width: size.width,
+                    height: size.height
+                ),
+                display: false
+            )
+        } else if let screen = NSScreen.main {
+            let visible = screen.visibleFrame
+            panel.setFrameOrigin(
+                NSPoint(x: visible.maxX - size.width - 24, y: visible.maxY - size.height)
+            )
         } else {
             panel.center()
         }
@@ -270,10 +337,59 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         panelLayoutObservation = model.preferences.$panelLayout
             .removeDuplicates()
+            .dropFirst()
             .receive(on: RunLoop.main)
             .sink { [weak self] mode in
                 self?.resizePanel(for: mode)
             }
+    }
+
+    // MARK: - NSWindowDelegate
+
+    func windowDidMove(_ notification: Notification) {
+        rememberPanelOrigin()
+    }
+
+    func windowDidEndLiveResize(_ notification: Notification) {
+        rememberPanelSize()
+    }
+
+    private func rememberPanelOrigin() {
+        guard let panel, panel.isVisible, !isAdjustingPanel else { return }
+        model.preferences.setPanelTopLeft(Self.topLeft(of: panel.frame))
+    }
+
+    private func rememberPanelSize() {
+        guard let panel, panel.isVisible, !isAdjustingPanel else { return }
+        model.preferences.setPanelTopLeft(Self.topLeft(of: panel.frame))
+        model.preferences.setPanelSize(panel.frame.size, for: model.preferences.panelLayout)
+    }
+
+    private static func topLeft(of frame: NSRect) -> CGPoint {
+        CGPoint(x: frame.minX, y: frame.maxY)
+    }
+
+    private func resetPanelGeometry() {
+        model.preferences.resetPanelGeometry()
+        guard let panel, let screen = panel.screen ?? NSScreen.main else { return }
+        let mode = model.preferences.panelLayout
+        let size = mode.defaultSize(
+            visibleProviderCount: model.preferences.visibleProviderOrder.count
+        )
+        let visible = screen.visibleFrame
+        isAdjustingPanel = true
+        panel.setFrame(
+            NSRect(
+                x: visible.maxX - size.width - 24,
+                y: visible.maxY - size.height,
+                width: size.width,
+                height: size.height
+            ),
+            display: true,
+            animate: true
+        )
+        isAdjustingPanel = false
+        panel.invalidateShadow()
     }
 
     private func makeStatusItem() {
@@ -374,6 +490,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 guard let self else { return }
                 self.updateStatusItem(snapshots: self.model.snapshots)
                 self.updateMenuTitles()
+                self.republishHUD()
+            }
+        lowQuotaObservation = model.preferences.$lowQuotaThreshold
+            .removeDuplicates()
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.updateStatusItem(snapshots: self.model.snapshots)
+                self.republishHUD()
             }
         providerOrderObservation = model.preferences.$providerOrder
             .dropFirst()
@@ -391,6 +517,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 self.updateStatusItem(snapshots: self.model.snapshots)
                 self.updateMenuTitles()
                 self.resizePanel(for: self.model.preferences.panelLayout)
+                self.republishHUD()
             }
         menuBarDisplayObservation = model.preferences.$menuBarDisplayMode
             .dropFirst()
@@ -399,6 +526,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 guard let self else { return }
                 self.updateStatusItem(snapshots: self.model.snapshots)
             }
+    }
+
+    private func republishHUD() {
+        model.hud.apply(preferences: model.preferences, snapshots: model.snapshots)
     }
 
     func menuWillOpen(_ menu: NSMenu) {
@@ -476,10 +607,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private var statusImage: NSImage? {
-        NSImage(
-            systemSymbolName: "gauge.with.dots.needle.67percent",
+        // Swap the gauge for a warning as soon as any visible service drops to
+        // the configured threshold, so the menu bar is glanceable on its own.
+        let lowProviders = model.lowQuotaProviders
+        let name = lowProviders.isEmpty
+            ? "gauge.with.dots.needle.67percent"
+            : "gauge.with.dots.needle.0percent"
+        let image = NSImage(
+            systemSymbolName: name,
             accessibilityDescription: "Quota Bar"
         )
+        guard !lowProviders.isEmpty else { return image }
+        // Status-item images are templates by default, which would drop the
+        // tint that makes the warning readable at a glance.
+        let tinted = image?.withSymbolConfiguration(
+            NSImage.SymbolConfiguration(paletteColors: [.systemOrange])
+        )
+        tinted?.isTemplate = false
+        return tinted ?? image
     }
 
     private func updateQuotaMenuItems(snapshots: [ProviderSnapshot]) {
@@ -601,25 +746,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         value.utf8.reduce(0) { ($0 << 8) + OSType($1) }
     }
 
+    /// Resizes in place: the top edge and whichever side edge the panel is
+    /// parked against both stay put, so collapsing and expanding never walks
+    /// the panel across the screen.
     private func resizePanel(for mode: PanelLayoutMode) {
         guard let panel else { return }
         let oldFrame = panel.frame
-        let newSize = NSSize(
-            width: mode.panelWidth(
-                visibleProviderCount: model.preferences.visibleProviderOrder.count
-            ),
-            height: mode.panelHeight
+        let newSize = mode.clamp(
+            model.preferences.savedPanelSize(for: mode)
+                ?? mode.defaultSize(
+                    visibleProviderCount: model.preferences.visibleProviderOrder.count
+                )
         )
-        let origin = NSPoint(
-            x: oldFrame.maxX - newSize.width,
-            y: oldFrame.maxY - newSize.height
+        let newFrame = PanelGeometry.resized(
+            oldFrame,
+            to: newSize,
+            onScreen: panel.screen?.frame
         )
-        hostingView?.layer?.cornerRadius = mode == .compact ? 20 : 24
-        panel.setFrame(
-            NSRect(origin: origin, size: newSize),
-            display: true,
-            animate: true
-        )
+        isAdjustingPanel = true
+        panel.minSize = mode.minSize
+        panel.maxSize = mode.maxSize
+        panelContainer?.layer?.cornerRadius = mode.cornerRadius
+        panel.setFrame(newFrame, display: true, animate: true)
+        isAdjustingPanel = false
+        model.preferences.setPanelTopLeft(Self.topLeft(of: panel.frame))
         panel.invalidateShadow()
         updateMenuTitles()
     }
@@ -705,7 +855,9 @@ enum MenuBarSummary {
         {
             return balance.compactText
         }
-        if let limit = QuotaWindowSelector.limit(
+        // Fall back to the provider's own window: services like Gemini only
+        // report a daily allowance and would otherwise read "—" in weekly mode.
+        if let limit = QuotaWindowSelector.primary(
             in: snapshot.limits,
             preference: preference
         ) {

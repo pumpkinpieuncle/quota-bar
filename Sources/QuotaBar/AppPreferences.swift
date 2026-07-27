@@ -58,6 +58,26 @@ final class AppPreferences: ObservableObject {
         }
     }
 
+    /// Percentage at or below which a provider is treated as running low. Zero
+    /// turns the warning off.
+    @Published var lowQuotaThreshold: Int {
+        didSet { defaults.set(lowQuotaThreshold, forKey: Keys.lowQuotaThreshold) }
+    }
+
+    @Published var hudEnabled: Bool {
+        didSet { defaults.set(hudEnabled, forKey: Keys.hudEnabled) }
+    }
+
+    @Published var hudPort: Int {
+        didSet { defaults.set(hudPort, forKey: Keys.hudPort) }
+    }
+
+    /// When off the HUD only answers on 127.0.0.1, which is useless for a phone
+    /// but handy for testing on the Mac itself.
+    @Published var hudAllowsLAN: Bool {
+        didSet { defaults.set(hudAllowsLAN, forKey: Keys.hudAllowsLAN) }
+    }
+
     private let defaults: UserDefaults
 
     private enum Keys {
@@ -70,6 +90,18 @@ final class AppPreferences: ObservableObject {
         static let providerOrder = "providerOrder"
         static let hiddenProviders = "hiddenProviders"
         static let pausedProviders = "pausedProviders"
+        static let knownProviders = "knownProviders"
+        static let lowQuotaThreshold = "lowQuotaThreshold"
+        static let hudEnabled = "hudEnabled"
+        static let hudPort = "hudPort"
+        static let hudAllowsLAN = "hudAllowsLAN"
+        static let hudToken = "hudToken"
+
+        static let panelTopLeft = "panelTopLeft"
+
+        static func panelSize(_ mode: PanelLayoutMode) -> String {
+            "panelSize.\(mode.rawValue)"
+        }
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -132,19 +164,114 @@ final class AppPreferences: ObservableObject {
         providerOrder = savedOrder
             + ProviderID.allCases.filter { !savedOrder.contains($0) }
 
-        if defaults.object(forKey: Keys.hiddenProviders) != nil {
+        let isFirstRun = defaults.object(forKey: Keys.hiddenProviders) == nil
+        if isFirstRun {
+            hiddenProviders = ProviderID.optInByDefault
+        } else {
+            // Providers added by an update start hidden so an upgrade never
+            // silently widens the panel with services the user does not use.
+            let recorded = (defaults.stringArray(forKey: Keys.knownProviders) ?? [])
+                .compactMap(ProviderID.init(rawValue:))
+            // Installs from before this key existed knew exactly these four.
+            let known = recorded.isEmpty
+                ? Set<ProviderID>([.codex, .claude, .kimi, .deepseek])
+                : Set(recorded)
+            let introduced = ProviderID.allCases.filter { !known.contains($0) }
             hiddenProviders = Set(
                 (defaults.stringArray(forKey: Keys.hiddenProviders) ?? [])
                     .compactMap(ProviderID.init(rawValue:))
-            )
-        } else {
-            hiddenProviders = [.deepseek]
+            ).union(introduced)
         }
+        defaults.set(ProviderID.allCases.map(\.rawValue), forKey: Keys.knownProviders)
 
         pausedProviders = Set(
             (defaults.stringArray(forKey: Keys.pausedProviders) ?? [])
                 .compactMap(ProviderID.init(rawValue:))
         )
+
+        lowQuotaThreshold = defaults.object(forKey: Keys.lowQuotaThreshold) == nil
+            ? 10
+            : min(max(defaults.integer(forKey: Keys.lowQuotaThreshold), 0), 100)
+
+        hudEnabled = defaults.bool(forKey: Keys.hudEnabled)
+        let savedPort = defaults.integer(forKey: Keys.hudPort)
+        hudPort = savedPort == 0 ? 7_425 : min(max(savedPort, 1_024), 65_535)
+        hudAllowsLAN = defaults.object(forKey: Keys.hudAllowsLAN) == nil
+            ? true
+            : defaults.bool(forKey: Keys.hudAllowsLAN)
+    }
+
+    // MARK: - Panel geometry
+
+    /// Panel geometry is written on every drag, so it deliberately lives
+    /// outside `@Published` state: republishing here would redraw the whole
+    /// panel while the user is still moving it.
+    ///
+    /// The position is stored as the *top* left corner and shared by both
+    /// layouts. AppKit frames grow upwards from their origin, so remembering a
+    /// bottom-left corner per layout made the panel's top edge jump every time
+    /// it collapsed or expanded. Sizes stay per layout, and are only recorded
+    /// when the user resizes by hand, so showing another service still widens a
+    /// panel that has never been resized.
+    func savedPanelTopLeft() -> CGPoint? {
+        guard
+            let values = defaults.array(forKey: Keys.panelTopLeft) as? [Double],
+            values.count == 2
+        else {
+            return nil
+        }
+        return CGPoint(x: values[0], y: values[1])
+    }
+
+    func setPanelTopLeft(_ point: CGPoint) {
+        defaults.set([point.x, point.y], forKey: Keys.panelTopLeft)
+    }
+
+    func savedPanelSize(for mode: PanelLayoutMode) -> CGSize? {
+        guard
+            let values = defaults.array(forKey: Keys.panelSize(mode)) as? [Double],
+            values.count == 2,
+            values[0] > 0,
+            values[1] > 0
+        else {
+            return nil
+        }
+        return mode.clamp(CGSize(width: values[0], height: values[1]))
+    }
+
+    func setPanelSize(_ size: CGSize, for mode: PanelLayoutMode) {
+        defaults.set([size.width, size.height], forKey: Keys.panelSize(mode))
+    }
+
+    var hasCustomPanelSize: Bool {
+        PanelLayoutMode.allCases.contains { savedPanelSize(for: $0) != nil }
+    }
+
+    func resetPanelGeometry() {
+        defaults.removeObject(forKey: Keys.panelTopLeft)
+        for mode in PanelLayoutMode.allCases {
+            defaults.removeObject(forKey: Keys.panelSize(mode))
+        }
+    }
+
+    // MARK: - HUD
+
+    /// Shared secret the HUD page and the ESP32 firmware present. Generated on
+    /// demand and stored in defaults because it only guards a read-only status
+    /// feed on the local network.
+    func hudToken() -> String {
+        if let existing = defaults.string(forKey: Keys.hudToken), !existing.isEmpty {
+            return existing
+        }
+        let alphabet = Array("abcdefghijkmnopqrstuvwxyz23456789")
+        let token = String((0..<12).map { _ in alphabet.randomElement() ?? "x" })
+        defaults.set(token, forKey: Keys.hudToken)
+        return token
+    }
+
+    func regenerateHUDToken() -> String {
+        defaults.removeObject(forKey: Keys.hudToken)
+        return hudToken()
     }
 
     var visibleProviderOrder: [ProviderID] {

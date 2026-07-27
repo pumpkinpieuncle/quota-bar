@@ -144,10 +144,13 @@ actor KimiUsageClient {
         }
 
         var seen = Set<String>()
-        return rows.filter { row in
+        let unique = rows.filter { row in
             let key = "\(row.label)-\(Int(row.clampedRemaining.rounded()))"
             return seen.insert(key).inserted
-        }.prefix(2).map { $0 }
+        }
+        // Kimi returns the rolling summary before the individual windows, so
+        // order by window length to keep the card's 5h/weekly rows stable.
+        return QuotaWindowSelector.ordered(Array(unique.prefix(2)))
     }
 
     private func usageWindow(
@@ -240,7 +243,7 @@ actor KimiUsageClient {
 
     private func applyKimiHeaders(to request: inout URLRequest) {
         request.setValue("kimi_cli", forHTTPHeaderField: "X-Msh-Platform")
-        request.setValue("QuotaBar/1.2.6", forHTTPHeaderField: "X-Msh-Version")
+        request.setValue("QuotaBar/\(AppVersion.short)", forHTTPHeaderField: "X-Msh-Version")
         if let deviceID = try? String(
             contentsOf: home.appending(path: ".kimi-code/device_id"),
             encoding: .utf8

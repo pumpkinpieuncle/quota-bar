@@ -2,6 +2,7 @@ import Foundation
 import AppKit
 import Testing
 @testable import QuotaBar
+@testable import QuotaBarHUD
 
 @Test func windowLabels() {
     #expect(LocalCollectors.windowLabel(minutes: 300) == "5 小时")
@@ -275,12 +276,15 @@ import Testing
         defaults.string(forKey: "menuBarDisplayMode")
             == MenuBarDisplayMode.scrolling.rawValue
     )
-    #expect(preferences.hiddenProviders == [.deepseek])
+    #expect(preferences.hiddenProviders == ProviderID.optInByDefault)
     preferences.setProvider(.deepseek, hidden: false)
     #expect(preferences.visibleProviderOrder.contains(.deepseek))
 
     preferences.moveProvider(.deepseek, offset: -1)
-    #expect(preferences.providerOrder == [.codex, .claude, .deepseek, .kimi])
+    #expect(
+        preferences.providerOrder
+            == [.codex, .claude, .deepseek, .kimi, .grok, .gemini]
+    )
 
     preferences.setProvider(.codex, hidden: true)
     preferences.setProvider(.claude, hidden: true)
@@ -292,4 +296,232 @@ import Testing
     #expect(preferences.pausedProviders == [.kimi])
     preferences.setProvider(.kimi, paused: false)
     #expect(preferences.pausedProviders.isEmpty)
+}
+
+@MainActor
+@Test func newProvidersStayHiddenAfterAnUpgrade() throws {
+    let suite = "QuotaBarTests.\(UUID().uuidString)"
+    let defaults = try #require(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+
+    // An install from before Grok and Gemini existed: DeepSeek hidden, the
+    // other three visible, and no record of which providers were known.
+    defaults.set(["deepseek"], forKey: "hiddenProviders")
+
+    let preferences = AppPreferences(defaults: defaults)
+    #expect(preferences.hiddenProviders == [.deepseek, .grok, .gemini])
+    #expect(preferences.visibleProviderOrder == [.codex, .claude, .kimi])
+
+    // A second launch must not re-hide something the user turned on.
+    preferences.setProvider(.gemini, hidden: false)
+    let relaunched = AppPreferences(defaults: defaults)
+    #expect(relaunched.visibleProviderOrder.contains(.gemini))
+}
+
+@MainActor
+@Test func panelGeometryIsRememberedSeparatelyPerLayout() throws {
+    let suite = "QuotaBarTests.\(UUID().uuidString)"
+    let defaults = try #require(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+
+    let preferences = AppPreferences(defaults: defaults)
+    #expect(preferences.savedPanelSize(for: .standard) == nil)
+    #expect(!preferences.hasCustomPanelSize)
+
+    preferences.setPanelTopLeft(CGPoint(x: 0, y: 900))
+    #expect(preferences.savedPanelTopLeft() == CGPoint(x: 0, y: 900))
+    // Moving the bar must not count as resizing it, so adding a service can
+    // still widen a panel the user never resized.
+    #expect(!preferences.hasCustomPanelSize)
+
+    preferences.setPanelSize(CGSize(width: 640, height: 320), for: .standard)
+    #expect(preferences.savedPanelSize(for: .standard) == CGSize(width: 640, height: 320))
+    #expect(preferences.hasCustomPanelSize)
+    // Out-of-range sizes are clamped back into what the layout supports.
+    preferences.setPanelSize(CGSize(width: 40, height: 20), for: .compact)
+    #expect(preferences.savedPanelSize(for: .compact) == PanelLayoutMode.compact.minSize)
+
+    preferences.resetPanelGeometry()
+    #expect(preferences.savedPanelTopLeft() == nil)
+    #expect(!preferences.hasCustomPanelSize)
+}
+
+@Test func collapsingAndExpandingKeepsTheTopEdgeStill() {
+    let screen = CGRect(x: 0, y: 0, width: 1_920, height: 1_080)
+    let standard = PanelLayoutMode.standard.defaultSize(visibleProviderCount: 6)
+    let compact = PanelLayoutMode.compact.defaultSize(visibleProviderCount: 6)
+
+    // Parked against the right edge, top at y = 1000.
+    var frame = CGRect(
+        x: screen.maxX - standard.width - 24,
+        y: 1_000 - standard.height,
+        width: standard.width,
+        height: standard.height
+    )
+    let top = frame.maxY
+    let right = frame.maxX
+
+    // Toggle several times: neither the top nor the parked edge may drift.
+    for step in 0..<6 {
+        let size = step.isMultiple(of: 2) ? compact : standard
+        frame = PanelGeometry.resized(frame, to: size, onScreen: screen)
+        #expect(frame.maxY == top)
+        #expect(frame.maxX == right)
+        #expect(frame.size == size)
+    }
+
+    // A panel on the left half keeps its left edge instead.
+    var left = CGRect(x: 0, y: 1_000 - standard.height, width: standard.width, height: standard.height)
+    for step in 0..<4 {
+        let size = step.isMultiple(of: 2) ? compact : standard
+        left = PanelGeometry.resized(left, to: size, onScreen: screen)
+        #expect(left.maxY == 1_000)
+        #expect(left.minX == 0)
+    }
+}
+
+@Test func cardsFollowTheSelectedQuotaWindowRegardlessOfProviderOrder() {
+    // Kimi hands back the weekly summary first; Codex leads with 5 hours.
+    let weeklyFirst = [
+        LimitWindow(id: "w", label: "7 天", remainingPercent: 80, resetAt: nil),
+        LimitWindow(id: "f", label: "5 小时", remainingPercent: 30, resetAt: nil)
+    ]
+    #expect(QuotaWindowSelector.ordered(weeklyFirst).map(\.id) == ["f", "w"])
+
+    let fiveHour = QuotaWindowSelector.primary(in: weeklyFirst, preference: .fiveHour)
+    #expect(fiveHour?.id == "f")
+    #expect(QuotaWindowSelector.secondary(
+        in: weeklyFirst,
+        preference: .fiveHour
+    ).map(\.id) == ["w"])
+
+    let weekly = QuotaWindowSelector.primary(in: weeklyFirst, preference: .weekly)
+    #expect(weekly?.id == "w")
+    #expect(QuotaWindowSelector.secondary(
+        in: weeklyFirst,
+        preference: .weekly
+    ).map(\.id) == ["f"])
+
+    // A provider that only reports one window still fills the headline.
+    let dailyOnly = [
+        LimitWindow(
+            id: "d",
+            label: "1 天",
+            remainingPercent: 64,
+            resetAt: nil,
+            windowMinutes: 1_440
+        )
+    ]
+    #expect(QuotaWindowSelector.primary(in: dailyOnly, preference: .weekly)?.id == "d")
+    #expect(QuotaWindowSelector.secondary(in: dailyOnly, preference: .weekly).isEmpty)
+}
+
+@Test func windowLengthIsReadFromLabelsWhenNotReported() {
+    #expect(LimitWindow.minutes(fromLabel: "5 小时") == 300)
+    #expect(LimitWindow.minutes(fromLabel: "5 hours") == 300)
+    #expect(LimitWindow.minutes(fromLabel: "7 天") == 10_080)
+    #expect(LimitWindow.minutes(fromLabel: "7 days") == 10_080)
+    #expect(LimitWindow.minutes(fromLabel: "Weekly") == 10_080)
+    #expect(LimitWindow.minutes(fromLabel: "90 分钟") == 90)
+    #expect(LimitWindow.minutes(fromLabel: "额度") == .max)
+    // An explicit duration always wins over the label.
+    #expect(
+        LimitWindow(
+            id: "x",
+            label: "额度",
+            remainingPercent: 10,
+            resetAt: nil,
+            windowMinutes: 300
+        ).effectiveMinutes == 300
+    )
+}
+
+@Test func hudPayloadServesBothJSONAndMicrocontrollerText() throws {
+    let payload = HUDPayload(
+        version: "1.3.0",
+        host: "studio",
+        generatedAt: Date(timeIntervalSince1970: 1_785_034_681),
+        language: "en",
+        quotaWindow: "fiveHour",
+        lowQuotaThreshold: 10,
+        providers: [
+            HUDProvider(
+                id: "codex",
+                title: "Codex",
+                accent: "#5FD4AB",
+                state: "working",
+                stateLabel: "Working",
+                isActive: true,
+                headline: "62%",
+                percent: 62,
+                detail: "Plus · latest session",
+                limits: [
+                    HUDLimit(
+                        label: "5 hours",
+                        remainingPercent: 62,
+                        resetAt: nil,
+                        resetText: "Resets in 2h"
+                    )
+                ],
+                updatedAt: nil
+            ),
+            HUDProvider(
+                id: "deepseek",
+                title: "DeepSeek",
+                accent: "#59C2F5",
+                state: "connected",
+                stateLabel: "Connected",
+                isActive: false,
+                headline: "¥110",
+                percent: nil,
+                detail: "Account balance ¥110",
+                limits: [],
+                updatedAt: nil
+            )
+        ]
+    )
+
+    let json = try #require(
+        try JSONSerialization.jsonObject(with: payload.jsonData()) as? [String: Any]
+    )
+    #expect(json["quotaWindow"] as? String == "fiveHour")
+    #expect((json["providers"] as? [[String: Any]])?.count == 2)
+
+    let lines = payload.plainText().split(separator: "\n").map(String.init)
+    #expect(lines[0] == "# ts=1785034681 window=fiveHour low=10 count=2")
+    #expect(lines[1] == "Codex|62|working|62%|Resets in 2h")
+    // A balance has no percentage, so the field is left empty rather than faked.
+    #expect(lines[2] == "DeepSeek||connected|¥110|")
+}
+
+@Test func hudServerParsesRequestTargets() {
+    let plain = HUDServer.split(target: "/api/status")
+    #expect(plain.path == "/api/status")
+    #expect(plain.query.isEmpty)
+
+    let withQuery = HUDServer.split(target: "/api/status?token=abc%20d&pretty=1")
+    #expect(withQuery.path == "/api/status")
+    #expect(withQuery.query["token"] == "abc d")
+    #expect(withQuery.query["pretty"] == "1")
+}
+
+@MainActor
+@Test func cardGridNeverLeavesAnEmptyColumn() {
+    // The default panel width must lay the cards out with no dead space, so
+    // the column count is capped at the number of services.
+    for count in 1...6 {
+        let width = PanelLayoutMode.standard.defaultWidth(visibleProviderCount: count)
+        let available = width - 28  // the panel's horizontal padding
+        #expect(
+            ContentView.cardColumnCount(availableWidth: available, cardCount: count) == count
+        )
+    }
+
+    // Narrowing the panel wraps the cards instead of shrinking them forever.
+    #expect(ContentView.cardColumnCount(availableWidth: 1_226, cardCount: 6) == 6)
+    #expect(ContentView.cardColumnCount(availableWidth: 700, cardCount: 6) == 4)
+    #expect(ContentView.cardColumnCount(availableWidth: 340, cardCount: 6) == 2)
+    #expect(ContentView.cardColumnCount(availableWidth: 300, cardCount: 6) == 1)
+    #expect(ContentView.cardColumnCount(availableWidth: 0, cardCount: 6) == 1)
+    #expect(ContentView.cardColumnCount(availableWidth: 1_226, cardCount: 0) == 1)
 }

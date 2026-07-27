@@ -5,7 +5,37 @@ enum DeepSeekCredentialStore {
     private static let service = "local.quotabar.deepseek"
     private static let account = "api-key"
 
+    /// Remembers the first successful lookup for the lifetime of the process.
+    ///
+    /// The Keychain only permanently trusts an app whose code signature is
+    /// stable, and release builds here are ad-hoc signed, so every read can
+    /// raise a password prompt. Reading on each refresh therefore asked for the
+    /// login password every 30 seconds. Saving or removing the key updates this
+    /// in place; a key edited outside the app is picked up on the next launch.
+    private static let memo = CredentialMemo()
+
+    private final class CredentialMemo: @unchecked Sendable {
+        private let lock = NSLock()
+        /// Outer `nil` means "not looked up yet", inner `nil` means "no key".
+        private var value: String??
+
+        func cached() -> String?? {
+            lock.withLock { value }
+        }
+
+        func store(_ newValue: String?) {
+            lock.withLock { value = newValue }
+        }
+    }
+
     static func load() -> String? {
+        if let cached = memo.cached() { return cached }
+        let key = readFromKeychain()
+        memo.store(key)
+        return key
+    }
+
+    private static func readFromKeychain() -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -50,6 +80,7 @@ enum DeepSeekCredentialStore {
         } else if status != errSecSuccess {
             throw DeepSeekBalanceClient.ClientError.keychain(status)
         }
+        memo.store(normalized)
     }
 
     static func delete() throws {
@@ -62,6 +93,7 @@ enum DeepSeekCredentialStore {
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw DeepSeekBalanceClient.ClientError.keychain(status)
         }
+        memo.store(nil)
     }
 
     static func normalizedAPIKey(_ value: String) -> String {
@@ -141,7 +173,7 @@ actor DeepSeekBalanceClient {
         request.timeoutInterval = 10
         request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("QuotaBar/1.2.6 macOS", forHTTPHeaderField: "User-Agent")
+        request.setValue(AppVersion.userAgent, forHTTPHeaderField: "User-Agent")
 
         let (data, response) = try await URLSession.shared.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
