@@ -614,6 +614,12 @@ private struct ProviderCard: View {
                     .foregroundStyle(.white.opacity(0.53))
                     .lineLimit(1)
                     QuotaProgress(value: secondary.clampedRemaining / 100, tint: accent)
+                    if let reset = secondary.resetText(language: language) {
+                        Text(reset)
+                            .font(.system(size: 8.8, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.4))
+                            .lineLimit(1)
+                    }
                 }
             }
         }
