@@ -601,7 +601,7 @@ private struct ProviderCard: View {
             }
 
             ForEach(secondaryLimits.prefix(2)) { secondary in
-                VStack(spacing: 5) {
+                VStack(alignment: .leading, spacing: 5) {
                     HStack {
                         Text(localizedLimitLabel(secondary.label))
                         Spacer(minLength: 2)
@@ -619,6 +619,7 @@ private struct ProviderCard: View {
                             .font(.system(size: 8.8, weight: .medium))
                             .foregroundStyle(.white.opacity(0.4))
                             .lineLimit(1)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
             }
