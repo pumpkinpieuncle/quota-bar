@@ -7,7 +7,9 @@ app_dir="$project_dir/dist/Quota Bar.app"
 contents_dir="$app_dir/Contents"
 
 cd "$project_dir"
-swift build -c release
+# QUOTABAR_SWIFT_BUILD_FLAGS lets callers pass extra swift-build flags,
+# e.g. --disable-sandbox on hosts where SwiftPM's seatbelt is unavailable.
+swift build -c release ${QUOTABAR_SWIFT_BUILD_FLAGS:-}
 
 rm -rf "$app_dir"
 mkdir -p "$contents_dir/MacOS" "$contents_dir/Helpers" "$contents_dir/Resources"
