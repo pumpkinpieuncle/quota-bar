@@ -154,9 +154,17 @@ struct LimitWindow: Identifiable, Equatable, Sendable {
         if interval < 86_400 {
             let hours = Int(interval / 3_600)
             let minutes = Int(interval.truncatingRemainder(dividingBy: 3_600) / 60)
+            let relative = minutes > 0
+                ? language.text("\(hours) 小时 \(minutes) 分", "\(hours)h \(minutes)m")
+                : language.text("\(hours) 小时", "\(hours)h")
+            let clock = DateFormatter()
+            clock.locale = Locale(identifier: language == .chinese ? "zh_CN" : "en_US")
+            clock.dateFormat = language == .chinese ? "HH:mm" : "h:mm a"
+            // Relative time for the countdown, absolute time so the user can
+            // glance at when the 5-hour window actually comes back.
             return language.text(
-                minutes > 0 ? "\(hours) 小时 \(minutes) 分后重置" : "\(hours) 小时后重置",
-                minutes > 0 ? "Resets in \(hours)h \(minutes)m" : "Resets in \(hours)h"
+                "\(relative)后重置 · \(clock.string(from: resetAt))",
+                "Resets in \(relative) · \(clock.string(from: resetAt))"
             )
         }
         let formatter = DateFormatter()

@@ -490,6 +490,26 @@ private struct ProviderCard: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
                 .help(snapshot.source)
+
+            if snapshot.id == .deepseek {
+                Button {
+                    if let url = URL(string: "https://platform.deepseek.com/") {
+                        NSWorkspace.shared.open(url)
+                    }
+                } label: {
+                    HStack(spacing: 3) {
+                        Text(language.text("前往 API 平台", "Open API platform"))
+                            .font(.system(size: 9, weight: .semibold))
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 7.5, weight: .bold))
+                    }
+                }
+                .buttonStyle(CollectorButtonStyle(tint: accent))
+                .help(language.text(
+                    "在浏览器中打开 platform.deepseek.com",
+                    "Opens platform.deepseek.com in your browser"
+                ))
+            }
         }
         .padding(11)
         .frame(maxWidth: .infinity, minHeight: 168, alignment: .topLeading)
@@ -710,6 +730,7 @@ private struct SettingsOverlay: View {
                     spacing: 8
                 ) {
                     languageRow
+                    launchAtLoginRow
                     refreshRow
                     summaryRow
                     warningRow
@@ -1227,28 +1248,6 @@ private struct ProviderManagerOverlay: View {
                     .buttonStyle(CollectorButtonStyle(tint: .orange))
                 }
             }
-
-            Button {
-                if let url = URL(string: "https://platform.deepseek.com/") {
-                    NSWorkspace.shared.open(url)
-                }
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "safari")
-                        .font(.system(size: 9, weight: .semibold))
-                    Text(language.text(
-                        "前往 DeepSeek 开放平台（API Keys）",
-                        "Open the DeepSeek API platform"
-                    ))
-                    Image(systemName: "arrow.up.right")
-                        .font(.system(size: 8, weight: .bold))
-                }
-            }
-            .buttonStyle(CollectorButtonStyle(tint: ProviderID.deepseek.accent))
-            .help(language.text(
-                "在浏览器中打开 platform.deepseek.com",
-                "Opens platform.deepseek.com in your browser"
-            ))
 
             Text(language.text(
                 "需使用开放平台生成的 API Key（不是网页登录信息）；仅存于钥匙串，只请求 /user/balance。",
