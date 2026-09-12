@@ -193,6 +193,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     private var statusMenu: NSMenu?
     private var toggleMenuItem: NSMenuItem?
     private var refreshMenuItem: NSMenuItem?
+    private var updateMenuItem: NSMenuItem?
     private var quitMenuItem: NSMenuItem?
     private var quotaWindowMenuItem: NSMenuItem?
     private var fiveHourMenuItem: NSMenuItem?
@@ -455,6 +456,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         menu.addItem(refresh)
         menu.addItem(.separator())
 
+        let update = NSMenuItem(
+            title: "",
+            action: #selector(checkForUpdateMenu),
+            keyEquivalent: ""
+        )
+        update.target = self
+        menu.addItem(update)
+        menu.addItem(.separator())
+
         let quit = NSMenuItem(
             title: "",
             action: #selector(quit),
@@ -465,6 +475,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         statusMenu = menu
         toggleMenuItem = toggle
         refreshMenuItem = refresh
+        updateMenuItem = update
         quitMenuItem = quit
         updateMenuTitles()
         updateStatusItem(snapshots: model.snapshots)
@@ -542,6 +553,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             ? language.text("收起到菜单栏", "Collapse to menu bar")
             : language.text("显示浮窗", "Show panel")
         refreshMenuItem?.title = language.text("立即刷新", "Refresh now")
+        updateMenuItem?.title = {
+            switch model.updateState {
+            case .available(let version):
+                return language.text(
+                    "更新到 v\(version)…",
+                    "Update to v\(version)…"
+                )
+            case .downloading:
+                return language.text("正在下载更新…", "Downloading update…")
+            case .installing:
+                return language.text("正在安装更新…", "Installing update…")
+            case .checking:
+                return language.text("正在检查更新…", "Checking for updates…")
+            default:
+                return language.text("检查更新", "Check for updates")
+            }
+        }()
         quitMenuItem?.title = language.text("退出 Quota Bar", "Quit Quota Bar")
         fiveHourMenuItem?.title = language.text("显示 5 小时额度", "Show 5-hour quota")
         weeklyMenuItem?.title = language.text("显示周额度", "Show weekly quota")
@@ -784,6 +812,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
     @objc private func refreshNow() {
         Task { await model.refresh(forceRemote: true) }
+    }
+
+    /// One click from the status menu: check, and if a newer release exists,
+    /// download, swap and relaunch without further prompts.
+    @objc private func checkForUpdateMenu() {
+        Task {
+            await model.checkForUpdate()
+            switch model.updateState {
+            case .available:
+                await model.installUpdate()
+            case .upToDate:
+                showUpdateAlert(
+                    model.language.text(
+                        "已是最新版本（v\(AppVersion.short)）。",
+                        "You are on the latest version (v\(AppVersion.short))."
+                    )
+                )
+            case .failed(let message):
+                showUpdateAlert(
+                    model.language.text(
+                        "检查更新失败：\(message)",
+                        "Update check failed: \(message)"
+                    )
+                )
+            default:
+                break
+            }
+        }
+    }
+
+    private func showUpdateAlert(_ message: String) {
+        let alert = NSAlert()
+        alert.messageText = "Quota Bar"
+        alert.informativeText = message
+        alert.alertStyle = .informational
+        alert.runModal()
     }
 
     @objc private func quit() {

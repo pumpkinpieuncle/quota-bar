@@ -738,6 +738,7 @@ private struct SettingsOverlay: View {
                 ) {
                     languageRow
                     launchAtLoginRow
+                    updateRow
                     refreshRow
                     summaryRow
                     warningRow
@@ -811,6 +812,79 @@ private struct SettingsOverlay: View {
             )
             .labelsHidden()
             .toggleStyle(.switch)
+        }
+    }
+
+    private var updateRow: some View {
+        settingRow(
+            title: language.text("软件更新", "Software update"),
+            detail: updateDetail
+        ) {
+            updateActionButton
+        }
+    }
+
+    private var updateDetail: String {
+        if !AppUpdater.canSelfUpdate {
+            return language.text(
+                "需以打包的 App 方式运行才能自动更新",
+                "Self-update requires running the packaged .app"
+            )
+        }
+        switch model.updateState {
+        case .idle:
+            return language.text(
+                "当前 \(model.versionText) · 启动时会自动检查 GitHub 新版本",
+                "Currently \(model.versionText) · checks GitHub on launch"
+            )
+        case .checking:
+            return language.text("正在检查更新…", "Checking for updates…")
+        case .upToDate:
+            return language.text(
+                "当前 \(model.versionText) · 已是最新版本",
+                "Currently \(model.versionText) · up to date"
+            )
+        case .available(let version):
+            return language.text(
+                "发现新版本 v\(version) · 当前 \(model.versionText)",
+                "New version v\(version) available · currently \(model.versionText)"
+            )
+        case .downloading:
+            return language.text("正在下载新版本…", "Downloading the update…")
+        case .installing:
+            return language.text(
+                "下载完成，正在替换并重启…",
+                "Downloaded — swapping and restarting…"
+            )
+        case .failed(let message):
+            return language.text(
+                "检查失败：\(message)",
+                "Update check failed: \(message)"
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var updateActionButton: some View {
+        switch model.updateState {
+        case .available(let version):
+            Button {
+                Task { await model.installUpdate() }
+            } label: {
+                Text(language.text("一键更新到 v\(version)", "Update to v\(version)"))
+            }
+            .buttonStyle(CollectorButtonStyle(tint: Color(red: 0.43, green: 0.92, blue: 0.66)))
+        case .checking, .downloading, .installing:
+            Text(language.text("请稍候…", "Please wait…"))
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.45))
+        default:
+            Button {
+                Task { await model.checkForUpdate() }
+            } label: {
+                Text(language.text("检查更新", "Check for updates"))
+            }
+            .buttonStyle(CollectorButtonStyle(tint: Color(red: 0.55, green: 0.66, blue: 1)))
         }
     }
 

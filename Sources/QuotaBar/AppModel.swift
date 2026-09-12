@@ -11,6 +11,7 @@ final class AppModel: ObservableObject {
     @Published var notice: String?
     @Published var lastRefresh = Date()
     @Published var deepSeekKeyConfigured = DeepSeekCredentialStore.load() != nil
+    @Published var updateState: UpdateState = .idle
 
     let preferences = AppPreferences()
     let hud = HUDBridge()
@@ -19,6 +20,7 @@ final class AppModel: ObservableObject {
     private let deepSeekClient = DeepSeekBalanceClient()
     private let kimiClient = KimiUsageClient()
     private var scheduledRefresh: Task<Void, Never>?
+    private var latestRelease: LatestRelease?
 
     var language: AppLanguage { preferences.language }
 
@@ -42,6 +44,63 @@ final class AppModel: ObservableObject {
             try? ClaudeCollectorInstaller.install()
         }
         Task { await refresh(forceRemote: true) }
+        // Quiet update check shortly after launch so the settings row and the
+        // menu item already know whether a new release exists.
+        Task {
+            try? await Task.sleep(nanoseconds: 8_000_000_000)
+            await checkForUpdate()
+        }
+    }
+
+    // MARK: - Updates
+
+    func checkForUpdate() async {
+        guard AppUpdater.canSelfUpdate else {
+            updateState = .failed(
+                language.text(
+                    "需要以 App 方式运行才能检查更新",
+                    "Updates require running the packaged .app"
+                )
+            )
+            return
+        }
+        updateState = .checking
+        do {
+            let release = try await AppUpdater.fetchLatestRelease()
+            latestRelease = release
+            if AppUpdater.isNewer(release.version, than: AppVersion.short) {
+                updateState = .available(release.version)
+            } else {
+                updateState = .upToDate
+            }
+        } catch {
+            updateState = .failed(error.localizedDescription)
+        }
+    }
+
+    /// One click: download the latest release, swap the bundle and relaunch.
+    func installUpdate() async {
+        guard case .available = updateState else { return }
+        var release = latestRelease
+        if release == nil {
+            release = try? await AppUpdater.fetchLatestRelease()
+        }
+        guard let release else {
+            updateState = .failed(
+                language.text("找不到可下载的更新", "Could not find a downloadable update")
+            )
+            return
+        }
+        latestRelease = release
+        updateState = .downloading
+        do {
+            let staged = try await AppUpdater.downloadAndStage(release)
+            updateState = .installing
+            try AppUpdater.swapAndRelaunch(stagedAppURL: staged)
+            NSApp.terminate(nil)
+        } catch {
+            updateState = .failed(error.localizedDescription)
+        }
     }
 
     func refresh(
