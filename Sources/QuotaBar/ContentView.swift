@@ -651,6 +651,7 @@ private struct SettingsOverlay: View {
     @Binding var showProviderManager: Bool
     let onResetGeometry: () -> Void
     @State private var copiedHUDURL = false
+    @State private var launchAtLoginError: String?
 
     init(
         model: AppModel,
@@ -759,6 +760,29 @@ private struct SettingsOverlay: View {
             .onChange(of: preferences.language) { _, _ in
                 model.preferencesChanged(languageChanged: true)
             }
+        }
+    }
+
+    private var launchAtLoginRow: some View {
+        settingRow(
+            title: language.text("开机自启", "Launch at login"),
+            detail: launchAtLoginError
+                ?? language.text(
+                    "登录 macOS 时自动启动 Quota Bar",
+                    "Start Quota Bar automatically when you log in"
+                )
+        ) {
+            Toggle(
+                "",
+                isOn: Binding(
+                    get: { LaunchAtLogin.isEnabled },
+                    set: { enabled in
+                        launchAtLoginError = LaunchAtLogin.setEnabled(enabled)
+                    }
+                )
+            )
+            .labelsHidden()
+            .toggleStyle(.switch)
         }
     }
 
@@ -1203,6 +1227,28 @@ private struct ProviderManagerOverlay: View {
                     .buttonStyle(CollectorButtonStyle(tint: .orange))
                 }
             }
+
+            Button {
+                if let url = URL(string: "https://platform.deepseek.com/") {
+                    NSWorkspace.shared.open(url)
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "safari")
+                        .font(.system(size: 9, weight: .semibold))
+                    Text(language.text(
+                        "前往 DeepSeek 开放平台（API Keys）",
+                        "Open the DeepSeek API platform"
+                    ))
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 8, weight: .bold))
+                }
+            }
+            .buttonStyle(CollectorButtonStyle(tint: ProviderID.deepseek.accent))
+            .help(language.text(
+                "在浏览器中打开 platform.deepseek.com",
+                "Opens platform.deepseek.com in your browser"
+            ))
 
             Text(language.text(
                 "需使用开放平台生成的 API Key（不是网页登录信息）；仅存于钥匙串，只请求 /user/balance。",
