@@ -5,6 +5,7 @@ actor CodexUsageClient {
         let limits: [LimitWindow]
         let fetchedAt: Date
         let plan: String
+        var balances: [AccountBalance] = []
     }
 
     enum UsageError: LocalizedError {
@@ -120,10 +121,30 @@ actor CodexUsageClient {
         let plan = (rateLimits["planType"] as? String ?? "")
             .replacingOccurrences(of: "_", with: " ")
             .capitalized
+
+        var balances: [AccountBalance] = []
+        if
+            let credits = rateLimits["credits"] as? [String: Any],
+            let balanceValue = credits["balance"],
+            let amount = LocalCollectors.number(balanceValue),
+            amount > 0
+        {
+            let decimal = Decimal(string: "\(amount)") ?? Decimal(amount)
+            balances.append(
+                AccountBalance(
+                    currency: "USD",
+                    total: decimal,
+                    granted: 0,
+                    toppedUp: decimal
+                )
+            )
+        }
+
         return UsageResult(
             limits: QuotaWindowSelector.ordered(limits),
             fetchedAt: fetchedAt,
-            plan: plan
+            plan: plan,
+            balances: balances
         )
     }
 
@@ -282,18 +303,49 @@ actor CodexUsageClient {
         return lines
     }
 
-    private nonisolated static func codexExecutable() -> URL? {
+    nonisolated static func codexExecutable() -> URL? {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let candidates = [
+            "/Applications/Codex.app/Contents/Resources/codex-cli/bin/codex",
+            "/Applications/Codex.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
             "/Applications/Codex.app/Contents/Resources/codex",
+            "/Applications/Codex.app/Contents/MacOS/codex",
+            "/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex",
+            "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
             "/Applications/ChatGPT.app/Contents/Resources/codex",
+            "\(home)/Applications/Codex.app/Contents/Resources/codex-cli/bin/codex",
+            "\(home)/Applications/Codex.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
             "\(home)/Applications/Codex.app/Contents/Resources/codex",
+            "\(home)/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex",
+            "\(home)/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
             "\(home)/Applications/ChatGPT.app/Contents/Resources/codex",
+            "\(home)/.local/bin/codex",
             "/opt/homebrew/bin/codex",
             "/usr/local/bin/codex"
         ]
         return candidates.lazy
             .map(URL.init(fileURLWithPath:))
-            .first { FileManager.default.isExecutableFile(atPath: $0.path) }
+            .first { isWorkingExecutable($0) }
+    }
+
+    private nonisolated static func isWorkingExecutable(_ url: URL) -> Bool {
+        guard FileManager.default.isExecutableFile(atPath: url.path) else { return false }
+        let process = Process()
+        process.executableURL = url
+        process.arguments = ["--version"]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        let semaphore = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in semaphore.signal() }
+        do {
+            try process.run()
+            if semaphore.wait(timeout: .now() + 1.5) == .timedOut {
+                process.terminate()
+                return false
+            }
+            return process.terminationStatus == 0
+        } catch {
+            return false
+        }
     }
 }

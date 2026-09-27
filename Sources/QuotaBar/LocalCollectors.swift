@@ -1,5 +1,6 @@
 import Darwin
 import Foundation
+import SQLite3
 
 struct LocalSnapshotBundle: Sendable {
     var codex: ProviderSnapshot
@@ -78,16 +79,20 @@ enum LocalCollectors {
         language: AppLanguage
     ) -> ProviderSnapshot {
         let root = home.appending(path: ".codex/sessions")
+        let isRunning = processText.localizedCaseInsensitiveContains("/codex")
+            || processText.localizedCaseInsensitiveContains("CodexCLI.app")
         guard let latest = latestFile(in: root, named: nil, suffix: ".jsonl") else {
+            let installed = fm.fileExists(atPath: home.appending(path: ".codex").path)
+                || CodexUsageClient.codexExecutable() != nil
             return ProviderSnapshot(
                 id: .codex,
-                activity: processText.localizedCaseInsensitiveContains("/codex ") ? .idle : .offline,
+                activity: isRunning ? .idle : .offline,
                 limits: [],
                 detail: language.text("尚未发现 Codex 本地会话", "No local Codex session found"),
                 source: language.text("本地会话", "Local sessions"),
                 lastUpdated: nil,
                 setupAvailable: false,
-                isInstalled: fm.fileExists(atPath: home.appending(path: ".codex").path)
+                isInstalled: installed
             )
         }
 
@@ -128,7 +133,9 @@ enum LocalCollectors {
         let liveManagedTasks = liveCodexManagedTaskCount()
         let recentlyChanged = modified.map { Date().timeIntervalSince($0) < 90 } ?? false
         let activity: ActivityState
-        if eventActivity == .waitingApproval {
+        if !isRunning {
+            activity = .offline
+        } else if eventActivity == .waitingApproval {
             activity = .waitingApproval
         } else if eventActivity == .idle, liveManagedTasks == 0 {
             activity = .idle
@@ -458,23 +465,30 @@ enum LocalCollectors {
         )
     }
 
-    /// Gemini CLI keeps one `logs.json` per project under `~/.gemini/tmp`, each
-    /// holding the prompts sent from that folder. Counting today's prompts gives
-    /// an honest read on the Code Assist daily request allowance without ever
-    /// talking to Google.
+    /// Collects Gemini / Antigravity usage. Supports both Google Antigravity
+    /// (desktop app, language server, conversation database and transcripts)
+    /// and legacy Gemini CLI logs.
     private static func collectGemini(
         processText: String,
         language: AppLanguage
     ) -> ProviderSnapshot {
-        let root = home.appending(path: ".gemini")
-        let installed = fm.fileExists(atPath: root.path)
-        let isRunning = containsStandaloneProcess("gemini", in: processText)
+        let antigravityRoot = home.appending(path: ".gemini/antigravity")
+        let antigravityAppInstalled = fm.fileExists(atPath: "/Applications/Antigravity.app")
+            || fm.fileExists(atPath: home.appending(path: "Applications/Antigravity.app").path)
+        let antigravityInstalled = antigravityAppInstalled || fm.fileExists(atPath: antigravityRoot.path)
+        let geminiCLIInstalled = fm.fileExists(atPath: home.appending(path: ".gemini").path)
+        let installed = antigravityInstalled || geminiCLIInstalled
+
+        let isAntigravityRunning = processText.localizedCaseInsensitiveContains("antigravity")
+        let isGeminiRunning = containsStandaloneProcess("gemini", in: processText)
+        let isRunning = isAntigravityRunning || isGeminiRunning
+
         guard installed else {
             return ProviderSnapshot(
                 id: .gemini,
                 activity: .offline,
                 limits: [],
-                detail: language.text("未发现 Gemini CLI", "Gemini CLI not found"),
+                detail: language.text("未发现 Antigravity / Gemini", "Antigravity / Gemini not found"),
                 source: language.text("本地 ~/.gemini", "Local ~/.gemini"),
                 lastUpdated: nil,
                 setupAvailable: false,
@@ -482,16 +496,39 @@ enum LocalCollectors {
             )
         }
 
-        let logs = geminiPromptTimestamps(root: root.appending(path: "tmp"))
+        var antigravityWorking = false
+        var allDates: [Date] = []
+
+        if antigravityInstalled {
+            let info = readAntigravityInfo(root: antigravityRoot)
+            antigravityWorking = info.isWorking
+            allDates.append(contentsOf: info.timestamps)
+        }
+
+        // Also include any legacy Gemini CLI prompts if present
+        let cliLogs = geminiPromptTimestamps(root: home.appending(path: ".gemini/tmp"))
+        allDates.append(contentsOf: cliLogs)
+
+        // Deduplicate timestamps within 2 seconds
+        allDates.sort()
+        var deduped: [Date] = []
+        for date in allDates {
+            if let last = deduped.last, abs(date.timeIntervalSince(last)) < 2 {
+                continue
+            }
+            deduped.append(date)
+        }
+
         let startOfDay = Calendar.current.startOfDay(for: Date())
-        let today = logs.filter { $0 >= startOfDay }.count
-        let latest = logs.max()
+        let today = deduped.filter { $0 >= startOfDay }.count
+        let latest = deduped.max()
         let dailyAllowance = 1_000.0
+        let remaining = max(0, min(100, (dailyAllowance - Double(today)) / dailyAllowance * 100))
         let limits = [
             LimitWindow(
                 id: "gemini-daily",
                 label: language.text("1 天", "1 day"),
-                remainingPercent: (dailyAllowance - Double(today)) / dailyAllowance * 100,
+                remainingPercent: remaining,
                 resetAt: Calendar.current.date(byAdding: .day, value: 1, to: startOfDay),
                 windowMinutes: 1_440
             )
@@ -500,10 +537,37 @@ enum LocalCollectors {
         let recentlyChanged = latest.map { Date().timeIntervalSince($0) < 90 } ?? false
         let activity: ActivityState
         if isRunning {
-            activity = recentlyChanged ? .working : .idle
+            if isAntigravityRunning && (antigravityWorking || recentlyChanged) {
+                activity = .working
+            } else if !isAntigravityRunning && recentlyChanged {
+                activity = .working
+            } else {
+                activity = .idle
+            }
         } else {
             activity = .offline
         }
+
+        if antigravityInstalled {
+            let cached = AntigravityUsageClient.loadDiskCache(language: language)
+            let limits = cached?.limits ?? []
+            let detail = cached?.detail ?? language.text("正在同步 Antigravity 额度…", "Syncing Antigravity quota…")
+            let source = language.text("Antigravity 实时配额（gRPC）", "Antigravity real-time quota (gRPC)")
+            let lastUpdated = cached?.fetchedAt ?? latest
+
+            return ProviderSnapshot(
+                id: .gemini,
+                activity: activity,
+                limits: limits,
+                detail: detail,
+                source: source,
+                lastUpdated: lastUpdated,
+                setupAvailable: false,
+                isInstalled: true
+            )
+        }
+
+        let source = language.text("Gemini CLI 本地会话日志（免费层每日 1000 次）", "Local Gemini CLI logs (free tier: 1000 requests/day)")
 
         return ProviderSnapshot(
             id: .gemini,
@@ -513,14 +577,77 @@ enum LocalCollectors {
                 "今日 \(today)/\(Int(dailyAllowance)) 次请求",
                 "\(today)/\(Int(dailyAllowance)) requests today"
             ),
-            source: language.text(
-                "Gemini CLI 本地会话日志（免费层每日 1000 次）",
-                "Local Gemini CLI logs (free tier: 1000 requests/day)"
-            ),
+            source: source,
             lastUpdated: latest,
             setupAvailable: false,
             isInstalled: true
         )
+    }
+
+    private struct AntigravityInfo {
+        var isWorking: Bool
+        var timestamps: [Date]
+    }
+
+    private static func readAntigravityInfo(root: URL) -> AntigravityInfo {
+        var isWorking = false
+        var timestamps: [Date] = []
+
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let plainIso = ISO8601DateFormatter()
+
+        // 1. Read transcript.jsonl from brain directories
+        let brainDir = root.appending(path: "brain")
+        if let brainEntries = try? fm.contentsOfDirectory(
+            at: brainDir,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) {
+            for entry in brainEntries {
+                let transcriptURL = entry.appending(path: ".system_generated/logs/transcript.jsonl")
+                guard let data = try? Data(contentsOf: transcriptURL),
+                      let text = String(data: data, encoding: .utf8) else { continue }
+                for line in text.split(separator: "\n") {
+                    guard line.contains("\"type\":\"USER_INPUT\"") || line.contains("\"USER_INPUT\"") else { continue }
+                    guard let obj = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any],
+                          obj["type"] as? String == "USER_INPUT",
+                          let dateStr = obj["created_at"] as? String else { continue }
+                    if let date = iso.date(from: dateStr) ?? plainIso.date(from: dateStr) {
+                        timestamps.append(date)
+                    }
+                }
+            }
+        }
+
+        // 2. Read conversation_summaries.db for active status and timestamps
+        let dbPath = "file:" + root.appending(path: "conversation_summaries.db").path + "?immutable=1"
+        var db: OpaquePointer?
+        if sqlite3_open_v2(dbPath, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_URI, nil) == SQLITE_OK {
+            var stmt: OpaquePointer?
+            let query = "SELECT not_fully_idle, status, last_user_input_time FROM conversation_summaries WHERE last_user_input_time != ''"
+            if sqlite3_prepare_v2(db, query, -1, &stmt, nil) == SQLITE_OK {
+                while sqlite3_step(stmt) == SQLITE_ROW {
+                    let notIdle = sqlite3_column_int(stmt, 0)
+                    if let statusStr = sqlite3_column_text(stmt, 1) {
+                        let status = String(cString: statusStr)
+                        if notIdle == 1 || status == "CASCADE_RUN_STATUS_RUNNING" {
+                            isWorking = true
+                        }
+                    }
+                    if let timeStr = sqlite3_column_text(stmt, 2) {
+                        let str = String(cString: timeStr).replacingOccurrences(of: " ", with: "T")
+                        if let date = iso.date(from: str) ?? plainIso.date(from: str) {
+                            timestamps.append(date)
+                        }
+                    }
+                }
+                sqlite3_finalize(stmt)
+            }
+            sqlite3_close(db)
+        }
+
+        return AntigravityInfo(isWorking: isWorking, timestamps: timestamps)
     }
 
     private static func geminiPromptTimestamps(root: URL) -> [Date] {

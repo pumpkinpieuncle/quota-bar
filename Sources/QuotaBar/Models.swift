@@ -17,7 +17,7 @@ enum ProviderID: String, CaseIterable, Identifiable, Sendable {
         case .kimi: "Kimi"
         case .deepseek: "DeepSeek"
         case .grok: "Grok"
-        case .gemini: "Gemini"
+        case .gemini: "Antigravity"
         }
     }
 

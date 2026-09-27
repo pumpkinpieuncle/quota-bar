@@ -122,6 +122,73 @@ import Testing
     #expect(english.limits[1].label == "7 days")
 }
 
+@Test func readsCodexAccountRateLimitsWithCredits() throws {
+    let payload = """
+    {
+      "id": 2,
+      "result": {
+        "rateLimits": {
+          "primary": {
+            "usedPercent": 12,
+            "windowDurationMins": 10080,
+            "resetsAt": 1791073767
+          },
+          "secondary": null,
+          "credits": {
+            "hasCredits": true,
+            "unlimited": false,
+            "balance": "249.24"
+          },
+          "planType": "prolite"
+        }
+      }
+    }
+    """
+    let usage = try CodexUsageClient.parseResponse(
+        Data(payload.utf8),
+        fetchedAt: Date(timeIntervalSince1970: 1790492000)
+    )
+    #expect(usage.plan == "Prolite")
+    #expect(usage.limits.count == 1)
+    #expect(usage.limits[0].label == "7 天")
+    #expect(usage.limits[0].remainingPercent == 88)
+    #expect(usage.balances.count == 1)
+    #expect(usage.balances[0].currency == "USD")
+    #expect(usage.balances[0].compactText == "$249.24")
+}
+
+@Test func codexExecutableFindsWorkingBinary() {
+    let executable = CodexUsageClient.codexExecutable()
+    #expect(executable != nil)
+    if let path = executable?.path {
+        #expect(FileManager.default.isExecutableFile(atPath: path))
+        #expect(!path.contains("opencodex"))
+    }
+}
+
+@Test func geminiCollectorDetectsAntigravity() {
+    let snapshot = LocalCollectors.collect(language: .chinese).gemini
+    #expect(snapshot.id == .gemini)
+    #expect(snapshot.isInstalled)
+    #expect(snapshot.source.contains("Antigravity"))
+}
+
+@Test func liveCodexAccountFetchSucceeds() async throws {
+    let client = CodexUsageClient()
+    let usage = try await client.fetchIfNeeded(force: true, language: .chinese)
+    #expect(!usage.limits.isEmpty)
+    #expect(usage.limits[0].remainingPercent > 0)
+    #expect(!usage.plan.isEmpty)
+}
+
+@Test func liveAntigravityFetchSucceeds() async throws {
+    let client = AntigravityUsageClient()
+    let usage = try await client.fetchIfNeeded(force: true, language: .chinese)
+    #expect(!usage.limits.isEmpty)
+    #expect(usage.limits[0].remainingPercent > 0)
+    #expect(!usage.plan.isEmpty)
+}
+
 @Test func menuBarShowsAllProviderQuotas() {
     let providers: [ProviderID] = [.codex, .claude, .kimi]
     var snapshots = providers.enumerated().map { index, provider in

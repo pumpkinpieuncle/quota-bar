@@ -19,6 +19,7 @@ final class AppModel: ObservableObject {
     private let codexClient = CodexUsageClient()
     private let deepSeekClient = DeepSeekBalanceClient()
     private let kimiClient = KimiUsageClient()
+    private let antigravityClient = AntigravityUsageClient()
     private var scheduledRefresh: Task<Void, Never>?
     private var latestRelease: LatestRelease?
 
@@ -173,6 +174,9 @@ final class AppModel: ObservableObject {
                 if let index = merged.firstIndex(where: { $0.id == .codex }) {
                     merged[index].limits = usage.limits
                     merged[index].lastUpdated = usage.fetchedAt
+                    if !usage.balances.isEmpty {
+                        merged[index].balances = usage.balances
+                    }
                     merged[index].source = currentLanguage.text(
                         "Codex 账号额度 + 本地任务状态",
                         "Codex account quota + local task status"
@@ -184,10 +188,22 @@ final class AppModel: ObservableObject {
                 }
             } catch {
                 if let index = merged.firstIndex(where: { $0.id == .codex }) {
-                    merged[index].source = currentLanguage.text(
-                        "Codex 本地快照（账号同步暂不可用）",
-                        "Local Codex snapshot (account sync unavailable)"
-                    )
+                    if
+                        preserveRemoteDataOnFailure,
+                        let previous = previousSnapshots.first(where: {
+                            $0.id == .codex && !$0.limits.isEmpty
+                        })
+                    {
+                        merged[index].limits = previous.limits
+                        merged[index].balances = previous.balances
+                        merged[index].lastUpdated = previous.lastUpdated
+                        merged[index].source = previous.source
+                    } else {
+                        merged[index].source = currentLanguage.text(
+                            "Codex 本地快照（账号同步暂不可用）",
+                            "Local Codex snapshot (account sync unavailable)"
+                        )
+                    }
                 }
             }
         }
@@ -266,6 +282,46 @@ final class AppModel: ObservableObject {
                             error,
                             language: currentLanguage
                         )
+                    }
+                }
+            }
+        }
+
+        if
+            bundle.gemini.isInstalled,
+            !preferences.hiddenProviders.contains(.gemini),
+            !preferences.pausedProviders.contains(.gemini)
+        {
+            do {
+                let usage = try await antigravityClient.fetchIfNeeded(
+                    force: forceRemote,
+                    language: currentLanguage
+                )
+                if let index = merged.firstIndex(where: { $0.id == .gemini }) {
+                    merged[index].limits = usage.limits
+                    merged[index].lastUpdated = usage.fetchedAt
+                    merged[index].source = currentLanguage.text(
+                        "Antigravity 实时配额（gRPC）",
+                        "Antigravity real-time quota (gRPC)"
+                    )
+                    if let detail = usage.detail, !detail.isEmpty {
+                        merged[index].detail = detail
+                    }
+                    if let act = usage.activity {
+                        merged[index].activity = act
+                    }
+                }
+            } catch {
+                if let index = merged.firstIndex(where: { $0.id == .gemini }) {
+                    if
+                        preserveRemoteDataOnFailure,
+                        let previous = previousSnapshots.first(where: {
+                            $0.id == .gemini && !$0.limits.isEmpty
+                        })
+                    {
+                        merged[index].limits = previous.limits
+                        merged[index].lastUpdated = previous.lastUpdated
+                        merged[index].source = previous.source
                     }
                 }
             }
