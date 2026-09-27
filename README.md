@@ -1,13 +1,16 @@
 # Quota Bar
 
-一个轻量、原生的 macOS 菜单栏浮窗，用来查看 Codex、Claude Desktop / Code、Kimi Code、Gemini CLI、Grok CLI 的剩余额度、DeepSeek API 余额与当前工作状态，还能把同样的信息推到备用手机或 ESP32 上。
+一个轻量、原生的 macOS 菜单栏浮窗，用来查看 Codex、Claude Desktop / Code、Kimi Code、Antigravity（Gemini / Claude / GPT 模型）、Grok CLI 的剩余额度、DeepSeek API 余额与当前工作状态，支持应用内一键自动升级，还能把同样的信息推到备用手机或 ESP32 上。
 
-A lightweight native macOS floating panel for Codex, Claude Code, Kimi Code, Gemini CLI and Grok CLI quotas and work status, plus DeepSeek account balance — and it can mirror all of it to a spare phone or an ESP32.
+A lightweight native macOS floating panel for Codex, Claude Code, Kimi Code, Antigravity (Gemini, Claude & GPT models) and Grok CLI quotas and work status, plus DeepSeek account balance — supports one-click built-in auto updates and mirrors everything to a spare phone or ESP32.
 
 <img width="843" height="293" alt="image" src="https://github.com/user-attachments/assets/11484a74-5f22-4ed2-bb9c-87a9de099feb" />
 
 ## 功能 / Features
 
+- **内置自动更新**：启动后静默检查 GitHub Releases 最新版本；设置面板与右键菜单新增「检查更新」/「更新到 vX.X.X…」，一键下载并自动重启升级，无需重新手动下载 DMG。
+- **Antigravity 真实模型配额**：通过本地 Language Server 实时呈现 Gemini Models（Flash / Pro）与 Claude/GPT 模型的 5 小时滑动窗口与 7 天周额度，提供精确到分秒的重置倒计时与本地持久化缓存。
+- **Codex 额度与余额**：兼容最新版 ChatGPT.app 与官方独立 CLI，支持 Pro/Prolite 等账户的 7 天/5 小时额度及 Credit 余额展示。
 - 同屏展示各个服务的额度窗口、余额和重置时间，每个服务都用自己的品牌标识。
 - 顶部菜单栏可切换 5 小时或周额度；卡片上的大数字始终跟随这个选择。
 - 自动模式在宽屏显示完整摘要，小屏平滑循环滚动，也可强制选择完整或滚动方式。
@@ -36,10 +39,10 @@ A lightweight native macOS floating panel for Codex, Claude Code, Kimi Code, Gem
 | Claude | Claude Desktop 本地用量历史 / Claude Code status line | ✅ |
 | Kimi | Kimi Code 官方 `/usages` | ✅ |
 | DeepSeek | 官方 `GET /user/balance`（需 API Key） | 需手动开启 |
-| Gemini | 本地 CLI 日志，按免费层每日 1000 次请求折算 | 需手动开启 |
+| Antigravity | 本地 Language Server gRPC/HTTPS，实时读取 5 小时与周额度（支持 Gemini、Claude、GPT 模型） | 需手动开启 |
 | Grok | 本机工作状态与所用模型（xAI 未公开额度接口） | 需手动开启 |
 
-DeepSeek、Gemini、Grok 默认隐藏，在浮窗的“模型管理”里打开即可。
+DeepSeek、Antigravity、Grok 默认隐藏，在浮窗的“模型管理”里打开即可。
 
 ## 零模型调用原则 / Zero model calls
 
@@ -49,7 +52,7 @@ Quota Bar **不会为了显示状态而消耗 Codex、Claude 或 Kimi 的模型�
 - Claude Desktop：只读它维护的本地 `plan-usage-history.json`；Claude Code 使用官方 status line 与 **command hooks**。不会使用 prompt/agent hooks，也不会给 Claude 发送测试提示词。
 - Kimi：读取本地会话事件；额度只通过 Kimi Code 官方 `/usages` HTTP 端点同步，不是模型生成请求。
 - DeepSeek：只请求官方 `GET /user/balance` 账户余额接口，不调用对话或补全模型；隐藏后停止远程同步。
-- Gemini：只读 `~/.gemini/tmp/*/logs.json` 里的本地提问时间戳，用来统计当天请求数，完全不联网。
+- Antigravity：通过本地 Antigravity Language Server 服务的 RetrieveUserQuotaSummary 读取真实的 Gemini Models 与 Claude/GPT 模型的 5 小时及周额度，完全本地读取，不发起模型推理调用，不消耗额外 Token。
 - Grok：只读 `~/.grok` 里的本地配置和最近改动时间，完全不联网。
 - HUD 外接屏复用浮窗已有的快照，不会产生任何额外请求。
 - 不包含模型 SDK、遥测或第三方分析。
@@ -63,9 +66,10 @@ Quota Bar **不会为了显示状态而消耗 Codex、Claude 或 Kimi 的模型�
 
 当前 Release 使用 ad-hoc 临时签名，**未经过 Apple 公证**。请只从本仓库的官方 Releases 页面下载，并在安装前核对随包提供的 SHA-256 校验值。macOS 首次打开时会显示无法验证开发者的安全提示。
 
-## 安装
+## 安装与升级
 
-从 [Releases](https://github.com/pumpkinpieuncle/quota-bar/releases) 下载 DMG，将 `Quota Bar.app` 拖入 Applications。
+- **应用内自动升级**：已安装 Quota Bar 的用户（v1.3.2 及以上），可在顶部菜单栏右键点击「检查更新」，或打开设置面板点击更新，即可一键自动下载并重启完成升级，无需手动前往网页下载。
+- **首次安装**：从 [Releases](https://github.com/pumpkinpieuncle/quota-bar/releases) 下载最新 DMG，将 `Quota Bar.app` 拖入 Applications。
 
 ### macOS 提示“无法验证开发者”
 
