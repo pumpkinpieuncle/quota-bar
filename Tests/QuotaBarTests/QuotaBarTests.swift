@@ -334,13 +334,13 @@ import Testing
     let yaml = """
     version: 1
     refs:
-      DEEPSEEK_API_KEY: sk-4f267035abcdef1234567890abcdef
+      DEEPSEEK_API_KEY: sk-test-dummy-yaml-key-0123456789abcdef
     records:
       client-connection/browser-session:
         kind: grant
     """
     let key = DeepSeekCredentialStore.extractAPIKey(fromYamlOrText: yaml)
-    #expect(key == "sk-4f267035abcdef1234567890abcdef")
+    #expect(key == "sk-test-dummy-yaml-key-0123456789abcdef")
 
     let quotedYaml = """
     refs:
