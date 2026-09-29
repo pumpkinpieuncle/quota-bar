@@ -266,6 +266,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         panel.titlebarAppearsTransparent = true
         panel.isOpaque = false
         panel.backgroundColor = .clear
+        // The panel always paints its own dark chrome, so pin AppKit to the dark
+        // appearance. Without this the panel inherits the system Light Mode and
+        // every label that relies on the default `.primary` colour draws black on
+        // the dark background, while the standard controls (segmented pickers,
+        // switches, text fields) render in their light style.
+        panel.appearance = NSAppearance(named: .darkAqua)
         panel.hasShadow = true
         // Above the menu bar so the panel stays readable when it is snapped to
         // the very top of the display.

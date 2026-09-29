@@ -330,6 +330,50 @@ import Testing
     )
 }
 
+@Test func extractsDeepSeekAPIKeyFromDshYaml() {
+    let yaml = """
+    version: 1
+    refs:
+      DEEPSEEK_API_KEY: sk-4f267035abcdef1234567890abcdef
+    records:
+      client-connection/browser-session:
+        kind: grant
+    """
+    let key = DeepSeekCredentialStore.extractAPIKey(fromYamlOrText: yaml)
+    #expect(key == "sk-4f267035abcdef1234567890abcdef")
+
+    let quotedYaml = """
+    refs:
+      DEEPSEEK_API_KEY: "sk-quoted123456789012345678"
+    """
+    #expect(DeepSeekCredentialStore.extractAPIKey(fromYamlOrText: quotedYaml) == "sk-quoted123456789012345678")
+
+    let jsonConfig = """
+    {
+      "refs": {
+        "DEEPSEEK_API_KEY": "sk-json123456789012345678"
+      }
+    }
+    """
+    #expect(DeepSeekCredentialStore.extractAPIKey(fromYamlOrText: jsonConfig) == "sk-json123456789012345678")
+}
+
+@Test func deepSeekCollectorDetectsHarness() {
+    let snapshot = LocalCollectors.collect(language: .chinese).deepseek
+    #expect(snapshot.id == .deepseek)
+    #expect(snapshot.isInstalled)
+    #expect(snapshot.source.contains("DeepSeek") || snapshot.source.contains("Harness"))
+}
+
+@Test func liveDeepSeekAccountFetchSucceeds() async throws {
+    guard DeepSeekCredentialStore.hasCredential() else { return }
+    let client = DeepSeekBalanceClient()
+    let result = try await client.fetchIfNeeded(force: true)
+    #expect(result.isAvailable)
+    #expect(!result.balances.isEmpty)
+    #expect(result.balances[0].total > 0)
+}
+
 @MainActor
 @Test func providerVisibilityAndOrderAreConfigurable() throws {
     let suite = "QuotaBarTests.\(UUID().uuidString)"

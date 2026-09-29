@@ -8,8 +8,9 @@ struct LocalSnapshotBundle: Sendable {
     var kimi: ProviderSnapshot
     var gemini: ProviderSnapshot
     var grok: ProviderSnapshot
+    var deepseek: ProviderSnapshot
 
-    var all: [ProviderSnapshot] { [codex, claude, kimi, gemini, grok] }
+    var all: [ProviderSnapshot] { [codex, claude, kimi, gemini, grok, deepseek] }
 }
 
 struct ClaudeDesktopUsage: Sendable {
@@ -28,7 +29,8 @@ enum LocalCollectors {
             claude: collectClaude(processText: processText, language: language),
             kimi: collectKimi(processText: processText, language: language),
             gemini: collectGemini(processText: processText, language: language),
-            grok: collectGrok(processText: processText, language: language)
+            grok: collectGrok(processText: processText, language: language),
+            deepseek: collectDeepSeek(processText: processText, language: language)
         )
     }
 
@@ -741,6 +743,99 @@ enum LocalCollectors {
             lastUpdated: modified,
             setupAvailable: false,
             isInstalled: true
+        )
+    }
+
+    private static func collectDeepSeek(
+        processText: String,
+        language: AppLanguage
+    ) -> ProviderSnapshot {
+        let harnessAppInstalled = fm.fileExists(atPath: "/Applications/DeepSeek Harness.app")
+            || fm.fileExists(atPath: home.appending(path: "Applications/DeepSeek Harness.app").path)
+        let dshConfigInstalled = fm.fileExists(atPath: home.appending(path: ".dsh").path)
+            || fm.fileExists(atPath: home.appending(path: "Library/Application Support/@deepseek-ai").path)
+        let deepSeekConfigInstalled = fm.fileExists(atPath: home.appending(path: ".deepseek").path)
+        let keyConfigured = DeepSeekCredentialStore.hasCredential()
+        let installed = harnessAppInstalled || dshConfigInstalled || deepSeekConfigInstalled || keyConfigured
+
+        let isHarnessRunning = processText.localizedCaseInsensitiveContains("DeepSeek Harness")
+            || processText.localizedCaseInsensitiveContains("/dsh-desktop")
+            || containsStandaloneProcess("dsh", in: processText)
+        let isStandaloneRunning = containsStandaloneProcess("deepseek", in: processText)
+        let isRunning = isHarnessRunning || isStandaloneRunning
+
+        let sessionsDir = home.appending(path: ".dsh/sessions")
+        let latestSession = latestFile(in: sessionsDir, named: nil, suffix: nil)
+        let sessionModified = latestSession.flatMap(modificationDate)
+        let recentlyActive = sessionModified.map { Date().timeIntervalSince($0) < 90 } ?? false
+
+        let activity: ActivityState
+        if isRunning {
+            activity = recentlyActive ? .working : .idle
+        } else if keyConfigured {
+            activity = .connected
+        } else {
+            activity = .offline
+        }
+
+        let detail: String
+        if !installed {
+            detail = language.text(
+                "未发现 DeepSeek Harness 或 API Key",
+                "DeepSeek Harness or API key not found"
+            )
+        } else if isRunning && recentlyActive {
+            detail = language.text("DeepSeek Harness 正在执行任务", "DeepSeek Harness working on tasks")
+        } else if isRunning {
+            detail = language.text("DeepSeek Harness 运行中", "DeepSeek Harness running")
+        } else if keyConfigured {
+            detail = language.text("等待同步账户余额", "Waiting to sync account balance")
+        } else {
+            detail = language.text(
+                "在模型管理中配置 API Key",
+                "Configure an API key in Model management"
+            )
+        }
+
+        let source: String
+        if let info = DeepSeekCredentialStore.loadCredentialInfo() {
+            switch info.source {
+            case .harness:
+                source = language.text(
+                    "DeepSeek Harness · 官方账户余额",
+                    "DeepSeek Harness · official balance"
+                )
+            case .environment:
+                source = language.text(
+                    "环境变量 DEEPSEEK_API_KEY · DeepSeek 官方账户余额",
+                    "DEEPSEEK_API_KEY env · official DeepSeek balance"
+                )
+            case .keychain:
+                source = language.text(
+                    "macOS 钥匙串 · DeepSeek 官方账户余额",
+                    "macOS Keychain · official DeepSeek balance"
+                )
+            case .config:
+                source = language.text(
+                    "本地配置 · DeepSeek 官方账户余额",
+                    "Local config · official DeepSeek balance"
+                )
+            }
+        } else if harnessAppInstalled || dshConfigInstalled {
+            source = language.text("DeepSeek Harness 本地状态", "Local DeepSeek Harness state")
+        } else {
+            source = language.text("DeepSeek 官方账户余额接口", "Official DeepSeek account balance endpoint")
+        }
+
+        return ProviderSnapshot(
+            id: .deepseek,
+            activity: activity,
+            limits: [],
+            detail: detail,
+            source: source,
+            lastUpdated: sessionModified,
+            setupAvailable: !keyConfigured,
+            isInstalled: installed
         )
     }
 

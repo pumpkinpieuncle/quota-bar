@@ -85,7 +85,12 @@ struct ContentView: View {
                     lineWidth: 0.8
                 )
         }
-        .preferredColorScheme(.dark)
+        // `preferredColorScheme` is a window-level preference; the panel is a
+        // hand-built NSPanel hosting this view directly, so nothing consumes it
+        // and the content silently falls back to the system appearance. Set the
+        // environment explicitly so the resolution never depends on the host.
+        // Applied outermost so the notice overlay is covered too.
+        .environment(\.colorScheme, .dark)
         .overlay(alignment: .bottom) {
             if let notice = model.notice, preferences.panelLayout == .standard {
                 NoticeView(text: notice) {
@@ -702,6 +707,7 @@ private struct SettingsOverlay: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(language.text("设置", "Settings"))
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.95))
                     Text("Quota Bar \(model.versionText)")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(.white.opacity(0.42))
@@ -990,6 +996,7 @@ private struct SettingsOverlay: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(language.text("HUD 外接屏", "HUD display"))
                         .font(.system(size: 11.5, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.92))
                     Text(language.text(
                         "在备用手机或 ESP32 上显示额度，只读、不出局域网",
                         "Show quotas on a spare phone or an ESP32 — read-only, LAN only"
@@ -1020,6 +1027,7 @@ private struct SettingsOverlay: View {
                     Toggle(isOn: $preferences.hudAllowsLAN) {
                         Text(language.text("允许局域网访问", "Allow LAN access"))
                             .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.72))
                     }
                     .toggleStyle(.checkbox)
                     .onChange(of: preferences.hudAllowsLAN) { _, _ in
@@ -1117,6 +1125,7 @@ private struct SettingsOverlay: View {
         let label = VStack(alignment: .leading, spacing: 2) {
             Text(title)
                 .font(.system(size: 11.5, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.92))
             Text(detail)
                 .font(.system(size: 9.5, weight: .medium))
                 .foregroundStyle(.white.opacity(0.4))
@@ -1162,6 +1171,7 @@ private struct ProviderManagerOverlay: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(language.text("模型管理", "Model management"))
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.95))
                     Text(language.text(
                         "调整排序、隐藏服务，或暂停单个额度刷新",
                         "Reorder, hide, or pause quota refresh per service"
@@ -1274,16 +1284,34 @@ private struct ProviderManagerOverlay: View {
         )
     }
 
+    private var deepSeekStatusText: String {
+        guard model.deepSeekKeyConfigured else {
+            return language.text("未配置", "Not configured")
+        }
+        if let source = model.deepSeekCredentialSource {
+            switch source {
+            case .harness:
+                return language.text("DeepSeek Harness 已授权", "DeepSeek Harness authorized")
+            case .environment:
+                return language.text("环境变量已配置", "Environment variable")
+            case .keychain:
+                return language.text("钥匙串已配置", "Keychain configured")
+            case .config:
+                return language.text("本地配置已生效", "Local config")
+            }
+        }
+        return language.text("已配置", "Configured")
+    }
+
     private var deepSeekSetup: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 BrandLogoView(provider: .deepseek, size: 14)
                 Text("DeepSeek")
                     .font(.system(size: 11.5, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.92))
                 Spacer()
-                Text(model.deepSeekKeyConfigured
-                    ? language.text("已配置", "Configured")
-                    : language.text("未配置", "Not configured"))
+                Text(deepSeekStatusText)
                     .font(.system(size: 8.5, weight: .bold))
                     .foregroundStyle(
                         model.deepSeekKeyConfigured
@@ -1331,8 +1359,8 @@ private struct ProviderManagerOverlay: View {
             }
 
             Text(language.text(
-                "需使用开放平台生成的 API Key（不是网页登录信息）；仅存于钥匙串，只请求 /user/balance。",
-                "Use a developer-platform API key, not web sign-in details. Stored in Keychain; only /user/balance is requested."
+                "支持自动识别 DeepSeek Harness 桌面端登录凭证或环境变量 DEEPSEEK_API_KEY，也可在此手动保存 API Key（仅存于钥匙串，只请求 /user/balance）。",
+                "Automatically detects DeepSeek Harness credentials or DEEPSEEK_API_KEY env variable, or save an API key manually (stored in Keychain; only /user/balance is requested)."
             ))
             .font(.system(size: 8.8, weight: .medium))
             .foregroundStyle(.white.opacity(0.4))
@@ -1411,7 +1439,10 @@ private struct CollectorButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 9.5, weight: .semibold))
-            .foregroundStyle(tint.opacity(configuration.isPressed ? 0.62 : 0.95))
+            // The label used to be the tint at full strength, which only reached
+            // about 3:1 against its own tinted capsule. The capsule carries the
+            // colour now, so the label can go white and clear 4.5:1.
+            .foregroundStyle(.white.opacity(configuration.isPressed ? 0.72 : 0.96))
             .padding(.horizontal, 9)
             .padding(.vertical, 6)
             .background(tint.opacity(configuration.isPressed ? 0.08 : 0.13), in: Capsule())

@@ -112,48 +112,28 @@ final class AppModel: ObservableObject {
         scheduledRefresh?.cancel()
         isRefreshing = true
         let currentLanguage = preferences.language
+        deepSeekKeyConfigured = DeepSeekCredentialStore.hasCredential()
         let previousSnapshots = snapshots
 
         let bundle = await Task.detached(priority: .utility) {
             LocalCollectors.collect(language: currentLanguage)
         }.value
         var merged = bundle.all
-        merged.append(
-            ProviderSnapshot(
-                id: .deepseek,
-                activity: deepSeekKeyConfigured ? .connected : .needsAttention,
-                limits: [],
-                detail: currentLanguage.text(
-                    deepSeekKeyConfigured
-                        ? "等待同步账户余额"
-                        : "在模型管理中配置 API Key",
-                    deepSeekKeyConfigured
-                        ? "Waiting to sync account balance"
-                        : "Configure an API key in Model management"
-                ),
-                source: currentLanguage.text(
-                    "DeepSeek 官方账户余额接口",
-                    "Official DeepSeek account balance endpoint"
-                ),
-                lastUpdated: nil,
-                setupAvailable: !deepSeekKeyConfigured,
-                isInstalled: deepSeekKeyConfigured
-            )
-        )
 
         for provider in preferences.pausedProviders {
-            guard
-                let currentIndex = merged.firstIndex(where: { $0.id == provider }),
-                let previous = previousSnapshots.first(where: { $0.id == provider })
-            else {
+            guard let currentIndex = merged.firstIndex(where: { $0.id == provider }) else {
                 continue
             }
-            merged[currentIndex].limits = previous.limits
-            merged[currentIndex].balances = previous.balances
-            merged[currentIndex].lastUpdated = previous.lastUpdated
-            merged[currentIndex].source = previous.source
-            if provider == .deepseek {
-                merged[currentIndex].activity = previous.activity
+            if let previous = previousSnapshots.first(where: { $0.id == provider }) {
+                merged[currentIndex].limits = previous.limits
+                merged[currentIndex].balances = previous.balances
+                merged[currentIndex].lastUpdated = previous.lastUpdated
+                merged[currentIndex].source = previous.source
+                if provider == .deepseek {
+                    merged[currentIndex].activity = previous.activity
+                }
+            } else {
+                merged[currentIndex].activity = .offline
             }
             merged[currentIndex].detail = currentLanguage.text(
                 "额度刷新已暂停",
@@ -243,16 +223,18 @@ final class AppModel: ObservableObject {
         if
             deepSeekKeyConfigured,
             !preferences.hiddenProviders.contains(.deepseek),
-            !preferences.pausedProviders.contains(.deepseek)
+            (!preferences.pausedProviders.contains(.deepseek) || (forceRemote && merged.first(where: { $0.id == .deepseek })?.balances.isEmpty == true))
         {
             do {
                 let balance = try await deepSeekClient.fetchIfNeeded(force: forceRemote)
                 if let index = merged.firstIndex(where: { $0.id == .deepseek }) {
                     merged[index].balances = balance.balances
                     merged[index].lastUpdated = balance.fetchedAt
-                    merged[index].activity = balance.isAvailable
-                        ? .connected
-                        : .needsAttention
+                    if !merged[index].activity.isActive {
+                        merged[index].activity = balance.isAvailable
+                            ? .connected
+                            : .needsAttention
+                    }
                     let primary = balance.balances.first
                     merged[index].detail = currentLanguage.text(
                         primary.map { "账户余额 \($0.compactText)" }
@@ -277,7 +259,9 @@ final class AppModel: ObservableObject {
                             "Automatic refresh failed; showing the last balance"
                         )
                     } else {
-                        merged[index].activity = .needsAttention
+                        if !merged[index].activity.isActive {
+                            merged[index].activity = .needsAttention
+                        }
                         merged[index].detail = deepSeekError(
                             error,
                             language: currentLanguage
@@ -377,6 +361,10 @@ final class AppModel: ObservableObject {
         notice = nil
     }
 
+    var deepSeekCredentialSource: DeepSeekCredentialSource? {
+        DeepSeekCredentialStore.loadCredentialInfo()?.source
+    }
+
     func saveDeepSeekAPIKey(_ key: String) async {
         do {
             let normalized = DeepSeekCredentialStore.normalizedAPIKey(key)
@@ -384,11 +372,12 @@ final class AppModel: ObservableObject {
             try DeepSeekCredentialStore.save(normalized)
             deepSeekKeyConfigured = true
             preferences.setProvider(.deepseek, hidden: false)
+            preferences.setProvider(.deepseek, paused: false)
             notice = language.text(
                 "DeepSeek API Key 验证成功，余额已同步。",
                 "DeepSeek API key verified and balance synced."
             )
-            await refresh(forceRemote: false)
+            await refresh(forceRemote: true)
         } catch {
             notice = deepSeekError(error, language: language)
         }
@@ -397,12 +386,12 @@ final class AppModel: ObservableObject {
     func removeDeepSeekAPIKey() async {
         do {
             try DeepSeekCredentialStore.delete()
-            deepSeekKeyConfigured = false
+            deepSeekKeyConfigured = DeepSeekCredentialStore.hasCredential()
             notice = language.text(
                 "DeepSeek API Key 已从 macOS 钥匙串移除。",
                 "DeepSeek API key was removed from macOS Keychain."
             )
-            await refresh(forceRemote: false)
+            await refresh(forceRemote: true)
         } catch {
             notice = deepSeekError(error, language: language)
         }

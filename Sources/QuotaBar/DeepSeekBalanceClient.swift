@@ -1,47 +1,193 @@
 import Foundation
+import LocalAuthentication
 import Security
+
+enum DeepSeekCredentialSource: String, Sendable, CaseIterable {
+    case keychain = "Keychain"
+    case environment = "Environment"
+    case harness = "DeepSeek Harness"
+    case config = "Config"
+}
+
+struct DeepSeekCredentialInfo: Sendable, Equatable {
+    let key: String
+    let source: DeepSeekCredentialSource
+}
 
 enum DeepSeekCredentialStore {
     private static let service = "local.quotabar.deepseek"
     private static let account = "api-key"
 
     /// Remembers the first successful lookup for the lifetime of the process.
-    ///
-    /// The Keychain only permanently trusts an app whose code signature is
-    /// stable, and release builds here are ad-hoc signed, so every read can
-    /// raise a password prompt. Reading on each refresh therefore asked for the
-    /// login password every 30 seconds. Saving or removing the key updates this
-    /// in place; a key edited outside the app is picked up on the next launch.
     private static let memo = CredentialMemo()
 
     private final class CredentialMemo: @unchecked Sendable {
         private let lock = NSLock()
         /// Outer `nil` means "not looked up yet", inner `nil` means "no key".
-        private var value: String??
+        private var value: DeepSeekCredentialInfo??
 
-        func cached() -> String?? {
+        func cached() -> DeepSeekCredentialInfo?? {
             lock.withLock { value }
         }
 
-        func store(_ newValue: String?) {
+        func store(_ newValue: DeepSeekCredentialInfo?) {
             lock.withLock { value = newValue }
+        }
+
+        func clear() {
+            lock.withLock { value = nil }
         }
     }
 
-    static func load() -> String? {
+    static func loadCredentialInfo() -> DeepSeekCredentialInfo? {
         if let cached = memo.cached() { return cached }
-        let key = readFromKeychain()
-        memo.store(key)
-        return key
+        let info = resolveCredentialInfo()
+        memo.store(info)
+        return info
+    }
+
+    static func load() -> String? {
+        loadCredentialInfo()?.key
+    }
+
+    static func hasCredential() -> Bool {
+        load() != nil
+    }
+
+    private static func resolveCredentialInfo() -> DeepSeekCredentialInfo? {
+        // 1. Manually saved in Keychain
+        if let key = readFromKeychain(), !key.isEmpty {
+            return DeepSeekCredentialInfo(key: key, source: .keychain)
+        }
+        // 2. Environment variables
+        if let envKey = readFromEnvironment(), !envKey.isEmpty {
+            return DeepSeekCredentialInfo(key: envKey, source: .environment)
+        }
+        // 3. DeepSeek Harness desktop / CLI (~/.dsh)
+        if let harnessKey = readFromDeepSeekHarness(), !harnessKey.isEmpty {
+            return DeepSeekCredentialInfo(key: harnessKey, source: .harness)
+        }
+        // 4. Local configs (~/.deepseek)
+        if let configKey = readFromLocalConfigs(), !configKey.isEmpty {
+            return DeepSeekCredentialInfo(key: configKey, source: .config)
+        }
+        return nil
+    }
+
+    private static func readFromEnvironment() -> String? {
+        let env = ProcessInfo.processInfo.environment
+        if let key = env["DEEPSEEK_API_KEY"], !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return normalizedAPIKey(key)
+        }
+        if let key = env["DEEPSEEK_KEY"], !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return normalizedAPIKey(key)
+        }
+        return nil
+    }
+
+    private static func readFromDeepSeekHarness() -> String? {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let candidates = [
+            home.appending(path: ".dsh/.credentials.yaml"),
+            home.appending(path: ".dsh/credentials.yaml"),
+            home.appending(path: ".dsh/.credentials.yml"),
+            home.appending(path: ".dsh/credentials.yml"),
+            home.appending(path: ".dsh/.credentials.json"),
+            home.appending(path: ".dsh/credentials.json"),
+            home.appending(path: ".dsh/profiles/desktop/cordis.patch.yml")
+        ]
+        for url in candidates {
+            guard let content = try? String(contentsOf: url, encoding: .utf8) else { continue }
+            if let key = extractAPIKey(fromYamlOrText: content) {
+                return key
+            }
+        }
+        return nil
+    }
+
+    private static func readFromLocalConfigs() -> String? {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let candidates = [
+            home.appending(path: ".deepseek/credentials.json"),
+            home.appending(path: ".deepseek/config.json"),
+            home.appending(path: ".config/deepseek/credentials.json"),
+            home.appending(path: ".config/deepseek/config.json")
+        ]
+        for url in candidates {
+            guard let content = try? String(contentsOf: url, encoding: .utf8) else { continue }
+            if let key = extractAPIKey(fromYamlOrText: content) {
+                return key
+            }
+        }
+        return nil
+    }
+
+    static func extractAPIKey(fromYamlOrText content: String) -> String? {
+        if content.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("{"),
+           let data = content.data(using: .utf8),
+           let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let key = extractAPIKey(fromJSONObject: obj) {
+                return key
+            }
+        }
+
+        let lines = content.components(separatedBy: .newlines)
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty || trimmed.hasPrefix("#") { continue }
+
+            let separatorIndex = trimmed.firstIndex(of: ":") ?? trimmed.firstIndex(of: "=")
+            guard let sep = separatorIndex else { continue }
+
+            let keyPart = trimmed[..<sep].trimmingCharacters(in: .whitespaces)
+            let valPart = trimmed[trimmed.index(after: sep)...].trimmingCharacters(in: .whitespaces)
+
+            let lowerKey = keyPart.lowercased()
+            if lowerKey == "deepseek_api_key" || lowerKey == "deepseek_key" || lowerKey == "api_key" || lowerKey == "apikey" || lowerKey == "key" {
+                let normalized = normalizedAPIKey(valPart)
+                if !normalized.isEmpty && normalized != "null" && normalized != "~" {
+                    return normalized
+                }
+            }
+        }
+
+        if let regex = try? NSRegularExpression(pattern: "sk-[A-Za-z0-9_-]{20,}") {
+            let nsRange = NSRange(content.startIndex..<content.endIndex, in: content)
+            if let match = regex.firstMatch(in: content, range: nsRange),
+               let range = Range(match.range, in: content) {
+                return normalizedAPIKey(String(content[range]))
+            }
+        }
+
+        return nil
+    }
+
+    private static func extractAPIKey(fromJSONObject dict: [String: Any]) -> String? {
+        if let refs = dict["refs"] as? [String: Any] {
+            if let key = refs["DEEPSEEK_API_KEY"] as? String ?? refs["api_key"] as? String {
+                let norm = normalizedAPIKey(key)
+                if !norm.isEmpty { return norm }
+            }
+        }
+        for candidate in ["DEEPSEEK_API_KEY", "deepseek_api_key", "api_key", "apiKey", "key", "token"] {
+            if let str = dict[candidate] as? String {
+                let norm = normalizedAPIKey(str)
+                if !norm.isEmpty { return norm }
+            }
+        }
+        return nil
     }
 
     private static func readFromKeychain() -> String? {
+        let context = LAContext()
+        context.interactionNotAllowed = true
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
             kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
+            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecUseAuthenticationContext as String: context
         ]
         var result: CFTypeRef?
         guard
@@ -80,7 +226,7 @@ enum DeepSeekCredentialStore {
         } else if status != errSecSuccess {
             throw DeepSeekBalanceClient.ClientError.keychain(status)
         }
-        memo.store(normalized)
+        memo.store(DeepSeekCredentialInfo(key: normalized, source: .keychain))
     }
 
     static func delete() throws {
@@ -93,7 +239,7 @@ enum DeepSeekCredentialStore {
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw DeepSeekBalanceClient.ClientError.keychain(status)
         }
-        memo.store(nil)
+        memo.clear()
     }
 
     static func normalizedAPIKey(_ value: String) -> String {
