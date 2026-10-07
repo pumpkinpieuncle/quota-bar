@@ -1,5 +1,10 @@
 # Changelog / 更新日志
 
+# Quota Bar 1.3.5
+
+- **启动空白窗口修复**：移除空的 SwiftUI 设置场景，直接通过 AppKit 启动已有浮窗；设置仍通过浮窗齿轮按钮打开，并保留退出、复制、粘贴等键盘快捷键。
+- **Blank window on launch**: start the existing panel directly through AppKit instead of an empty SwiftUI Settings scene. Settings remain available from the panel's gear button, with standard quit and editing shortcuts preserved.
+
 # Quota Bar 1.3.4
 
 ## 新增 / New
@@ -272,4 +277,3 @@ LAN-only, token-protected, and no extra model calls. Everything lives in
 安装方式：打开 DMG，将 `Quota Bar.app` 拖入 Applications。首次打开若被 macOS 拦截，请在“系统设置 → 隐私与安全性”中允许打开。
 
 ---
-

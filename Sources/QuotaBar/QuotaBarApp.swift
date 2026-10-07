@@ -214,6 +214,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        makeMainMenu()
         makePanel()
         makeStatusItem()
         registerShowPanelHotKey()
@@ -245,6 +246,53 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     ) -> Bool {
         showPanel()
         return true
+    }
+
+    private func makeMainMenu() {
+        // SwiftUI previously supplied the application and editing menus. Keep
+        // their keyboard shortcuts available in the AppKit lifecycle too.
+        let language = model.language
+        let mainMenu = NSMenu()
+        let applicationItem = NSMenuItem()
+        let applicationMenu = NSMenu(title: "Quota Bar")
+        applicationMenu.addItem(
+            withTitle: language.text("退出 Quota Bar", "Quit Quota Bar"),
+            action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"
+        )
+        applicationItem.submenu = applicationMenu
+        mainMenu.addItem(applicationItem)
+
+        let editItem = NSMenuItem()
+        let editMenu = NSMenu(title: language.text("编辑", "Edit"))
+        editMenu.addItem(
+            withTitle: language.text("撤销", "Undo"),
+            action: Selector(("undo:")), keyEquivalent: "z"
+        )
+        let redo = editMenu.addItem(
+            withTitle: language.text("重做", "Redo"),
+            action: Selector(("redo:")), keyEquivalent: "z"
+        )
+        redo.keyEquivalentModifierMask = [.command, .shift]
+        editMenu.addItem(.separator())
+        editMenu.addItem(
+            withTitle: language.text("剪切", "Cut"),
+            action: #selector(NSText.cut(_:)), keyEquivalent: "x"
+        )
+        editMenu.addItem(
+            withTitle: language.text("拷贝", "Copy"),
+            action: #selector(NSText.copy(_:)), keyEquivalent: "c"
+        )
+        editMenu.addItem(
+            withTitle: language.text("粘贴", "Paste"),
+            action: #selector(NSText.paste(_:)), keyEquivalent: "v"
+        )
+        editMenu.addItem(
+            withTitle: language.text("全选", "Select All"),
+            action: #selector(NSText.selectAll(_:)), keyEquivalent: "a"
+        )
+        editItem.submenu = editMenu
+        mainMenu.addItem(editItem)
+        NSApp.mainMenu = mainMenu
     }
 
     private func makePanel() {
@@ -942,12 +990,16 @@ private extension Notification.Name {
 }
 
 @main
-struct QuotaBarApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-
-    var body: some Scene {
-        Settings {
-            EmptyView()
+enum QuotaBarApp {
+    @MainActor
+    static func main() {
+        let application = NSApplication.shared
+        let delegate = AppDelegate()
+        application.delegate = delegate
+        // AppDelegate owns the panel and its settings overlay. A placeholder
+        // SwiftUI Settings scene can open an empty window at launch.
+        withExtendedLifetime(delegate) {
+            application.run()
         }
     }
 }
