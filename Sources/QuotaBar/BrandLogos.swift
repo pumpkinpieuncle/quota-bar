@@ -21,6 +21,7 @@ struct BrandLogoView: View {
 }
 
 extension ProviderID {
+    @MainActor
     var brandLogoImage: NSImage {
         BrandLogosCache.image(for: self)
     }
@@ -40,6 +41,7 @@ extension ProviderID {
     }
 }
 
+@MainActor
 private enum BrandLogosCache {
     static let codex: NSImage = makeImage(svg: codexSVG)
     static let claude: NSImage = makeImage(svg: claudeSVG)
