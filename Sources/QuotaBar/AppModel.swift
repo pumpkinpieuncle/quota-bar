@@ -194,15 +194,22 @@ final class AppModel: ObservableObject {
             !preferences.pausedProviders.contains(.kimi)
         {
             do {
-                let kimiIsActive = bundle.kimi.activity.isActive
+                let kimiIsWorking = bundle.kimi.activity == .working || bundle.kimi.activity == .thinking
                 let usage = try await kimiClient.fetchIfNeeded(
                     force: forceRemote,
-                    allowRemote: kimiIsActive,
-                    kimiIsWorking: kimiIsActive
+                    allowRemote: true,
+                    kimiIsWorking: kimiIsWorking
                 )
                 if let index = merged.firstIndex(where: { $0.id == .kimi }) {
                     merged[index].limits = usage.limits
                     merged[index].lastUpdated = usage.fetchedAt
+                    if !usage.balances.isEmpty {
+                        merged[index].balances = usage.balances
+                    }
+                    if !usage.plan.isEmpty,
+                       !merged[index].detail.localizedCaseInsensitiveContains(usage.plan) {
+                        merged[index].detail = "\(usage.plan) · \(merged[index].detail)"
+                    }
                     if usage.limits.isEmpty {
                         merged[index].detail = currentLanguage.text(
                             "额度服务暂未返回可展示窗口",

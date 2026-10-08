@@ -374,6 +374,14 @@ import Testing
     #expect(result.balances[0].total > 0)
 }
 
+@Test func liveKimiFetchSucceeds() async throws {
+    let client = KimiUsageClient()
+    guard let result = try? await client.fetchIfNeeded(force: true, allowRemote: true, kimiIsWorking: false) else { return }
+    #expect(!result.limits.isEmpty)
+    print("LIVE KIMI LIMITS:", result.limits.map { "\($0.label): \(Int($0.clampedRemaining.rounded()))%" })
+    #expect(result.limits.contains(where: { $0.label == "月额度" }))
+}
+
 @MainActor
 @Test func providerVisibilityAndOrderAreConfigurable() throws {
     let suite = "QuotaBarTests.\(UUID().uuidString)"
@@ -636,3 +644,109 @@ import Testing
     #expect(ContentView.cardColumnCount(availableWidth: 0, cardCount: 6) == 1)
     #expect(ContentView.cardColumnCount(availableWidth: 1_226, cardCount: 0) == 1)
 }
+
+@Test func readsKimiMonthlyAndRollingQuotas() throws {
+    let payload = """
+    {
+      "usages": {
+        "limit_5h": {
+          "used_ratio": 0.35,
+          "reset_time": "2026-10-08T10:32:18Z"
+        },
+        "limit_7d": {
+          "used_ratio": 0.40,
+          "reset_time": "2026-10-12T00:32:18Z"
+        },
+        "limit_month_total": {
+          "used_ratio": 0.25,
+          "reset_time": "2026-11-01T00:00:00Z"
+        }
+      },
+      "booster_wallet": {
+        "balance": {
+          "amount": 2500,
+          "amountLeft": 1850
+        },
+        "currency": "CNY"
+      }
+    }
+    """
+    let object = try #require(
+        try JSONSerialization.jsonObject(with: Data(payload.utf8)) as? [String: Any]
+    )
+    let limits = KimiUsageClient.parseUsage(object)
+    #expect(limits.count == 3)
+    #expect(limits.map(\.label) == ["5 小时", "7 天", "月额度"])
+    #expect(Int(limits[0].remainingPercent.rounded()) == 65)
+    #expect(Int(limits[1].remainingPercent.rounded()) == 60)
+    #expect(Int(limits[2].remainingPercent.rounded()) == 75)
+
+    let monthlyPrimary = QuotaWindowSelector.primary(in: limits, preference: .monthly)
+    #expect(monthlyPrimary?.label == "月额度")
+    #expect(Int(monthlyPrimary?.clampedRemaining.rounded() ?? 0) == 75)
+
+    let secondary = QuotaWindowSelector.secondary(in: limits, preference: .monthly)
+    #expect(secondary.map(\.label) == ["5 小时", "7 天"])
+
+    let fiveHourPrimary = QuotaWindowSelector.primary(in: limits, preference: .fiveHour)
+    #expect(fiveHourPrimary?.label == "5 小时")
+
+    let balances = KimiUsageClient.parseBoosterBalance(object)
+    #expect(balances.count == 1)
+    #expect(balances[0].compactText == "¥18.5")
+}
+
+@Test func monthlyWindowLabelsAndMinutes() {
+    #expect(LimitWindow.minutes(fromLabel: "月额度") == 43_200)
+    #expect(LimitWindow.minutes(fromLabel: "Monthly") == 43_200)
+    #expect(QuotaWindowPreference.monthly.label(language: .chinese) == "月额度")
+    #expect(QuotaWindowPreference.monthly.label(language: .english) == "Monthly")
+    #expect(QuotaWindowPreference.monthly.compactLabel(language: .chinese) == "月")
+    #expect(QuotaWindowPreference.monthly.compactLabel(language: .english) == "30d")
+}
+
+@Test func enrichesKimiCliUsageWithWebSubscriptionStats() throws {
+    let cliPayload = """
+    {
+      "usages": {
+        "limit_5h": { "used_ratio": 1.0, "reset_time": "2026-10-08T10:32:19Z" },
+        "limit_7d": { "used_ratio": 0.47, "reset_time": "2026-10-12T00:32:19Z" }
+      }
+    }
+    """
+    let webStatsPayload = """
+    {
+      "subscriptionBalance": {
+        "amountUsedRatio": 0.4469,
+        "expireTime": "2026-10-20T00:32:19Z"
+      },
+      "boosterWallets": [
+        {
+          "moneyLeft": {
+            "currency": "CNY",
+            "priceInCents": "1500"
+          }
+        }
+      ]
+    }
+    """
+    let cliObject = try #require(
+        try JSONSerialization.jsonObject(with: Data(cliPayload.utf8)) as? [String: Any]
+    )
+    let webStats = try #require(
+        try JSONSerialization.jsonObject(with: Data(webStatsPayload.utf8)) as? [String: Any]
+    )
+
+    let merged = KimiUsageClient.enrichWithWebStats(cliObject, webStats: webStats)
+    let limits = KimiUsageClient.parseUsage(merged)
+    #expect(limits.count == 3)
+    #expect(limits.map(\.label) == ["5 小时", "7 天", "月额度"])
+    #expect(Int(limits[2].remainingPercent.rounded()) == 55)
+    #expect(limits[2].label == "月额度")
+
+    let balances = KimiUsageClient.parseBoosterBalance(merged)
+    #expect(balances.count == 1)
+    #expect(balances[0].compactText == "¥15")
+}
+
+

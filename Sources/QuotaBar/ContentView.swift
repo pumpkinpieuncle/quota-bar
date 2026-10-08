@@ -664,11 +664,15 @@ private struct ProviderCard: View {
         if lower == "5 小时" || lower.contains("5h") {
             return language.text("5 小时", "5 hours")
         }
+        if lower == "月额度" || lower.contains("month") || lower == "30 天" || lower == "月" {
+            return language.text("月额度", "Monthly")
+        }
         if language == .english {
             return label
                 .replacingOccurrences(of: " 小时", with: " hours")
                 .replacingOccurrences(of: " 天", with: " days")
                 .replacingOccurrences(of: " 分钟", with: " minutes")
+                .replacingOccurrences(of: "月额度", with: "Monthly")
                 .replacingOccurrences(of: "额度", with: "Quota")
         }
         return label

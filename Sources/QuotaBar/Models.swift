@@ -178,6 +178,7 @@ struct LimitWindow: Identifiable, Equatable, Sendable {
 
     static func minutes(fromLabel label: String) -> Int {
         let lower = label.lowercased()
+        if lower.contains("month") || lower.contains("月") { return 43_200 }
         if lower.contains("week") || lower.contains("周") { return 10_080 }
         let value = lower
             .components(separatedBy: CharacterSet.decimalDigits.inverted)
@@ -196,6 +197,7 @@ struct LimitWindow: Identifiable, Equatable, Sendable {
 enum QuotaWindowPreference: String, CaseIterable, Identifiable, Sendable {
     case fiveHour
     case weekly
+    case monthly
 
     var id: String { rawValue }
 
@@ -203,6 +205,7 @@ enum QuotaWindowPreference: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .fiveHour: language.text("5 小时", "5 hours")
         case .weekly: language.text("周额度", "Weekly")
+        case .monthly: language.text("月额度", "Monthly")
         }
     }
 
@@ -210,6 +213,7 @@ enum QuotaWindowPreference: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .fiveHour: language.text("5时", "5h")
         case .weekly: language.text("周", "7d")
+        case .monthly: language.text("月", "30d")
         }
     }
 }
@@ -377,7 +381,9 @@ enum QuotaWindowSelector {
             // Anything up to a day counts as the short rolling window.
             limit.effectiveMinutes <= 1_440
         case .weekly:
-            limit.effectiveMinutes > 1_440 && limit.effectiveMinutes != .max
+            limit.effectiveMinutes > 1_440 && limit.effectiveMinutes < 40_000
+        case .monthly:
+            limit.effectiveMinutes >= 40_000 && limit.effectiveMinutes != .max
         }
     }
 }

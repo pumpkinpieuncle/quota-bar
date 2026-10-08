@@ -189,7 +189,7 @@ button:active{color:var(--ink)}
 
   function render(data) {
     lastPayload = data;
-    windowEl.textContent = data.quotaWindow === "weekly" ? "7 days" : "5 hours";
+    windowEl.textContent = data.quotaWindow === "monthly" ? "30 days" : (data.quotaWindow === "weekly" ? "7 days" : "5 hours");
     hostEl.textContent = data.host + " · Quota Bar " + data.version;
 
     if (!data.providers.length) {

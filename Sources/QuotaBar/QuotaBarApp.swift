@@ -198,6 +198,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     private var quotaWindowMenuItem: NSMenuItem?
     private var fiveHourMenuItem: NSMenuItem?
     private var weeklyMenuItem: NSMenuItem?
+    private var monthlyMenuItem: NSMenuItem?
     private var quotaMenuItems: [ProviderID: NSMenuItem] = [:]
     private var snapshotObservation: AnyCancellable?
     private var quotaWindowObservation: AnyCancellable?
@@ -494,12 +495,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         )
         weekly.target = self
         windowMenu.addItem(weekly)
+        let monthly = NSMenuItem(
+            title: "",
+            action: #selector(showMonthlyQuota),
+            keyEquivalent: ""
+        )
+        monthly.target = self
+        windowMenu.addItem(monthly)
         let windowParent = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         windowParent.submenu = windowMenu
         menu.addItem(windowParent)
         quotaWindowMenuItem = windowParent
         fiveHourMenuItem = fiveHour
         weeklyMenuItem = weekly
+        monthlyMenuItem = monthly
 
         let refresh = NSMenuItem(
             title: "",
@@ -627,8 +636,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         quitMenuItem?.title = language.text("退出 Quota Bar", "Quit Quota Bar")
         fiveHourMenuItem?.title = language.text("显示 5 小时额度", "Show 5-hour quota")
         weeklyMenuItem?.title = language.text("显示周额度", "Show weekly quota")
+        monthlyMenuItem?.title = language.text("显示月额度", "Show monthly quota")
         fiveHourMenuItem?.state = model.preferences.quotaWindow == .fiveHour ? .on : .off
         weeklyMenuItem?.state = model.preferences.quotaWindow == .weekly ? .on : .off
+        monthlyMenuItem?.state = model.preferences.quotaWindow == .monthly ? .on : .off
         quotaWindowMenuItem?.title = language.text(
             "顶部栏额度",
             "Menu bar quota"
@@ -862,6 +873,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
     @objc private func showWeeklyQuota() {
         model.preferences.quotaWindow = .weekly
+    }
+
+    @objc private func showMonthlyQuota() {
+        model.preferences.quotaWindow = .monthly
     }
 
     @objc private func refreshNow() {

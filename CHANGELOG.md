@@ -1,5 +1,19 @@
 # Changelog / 更新日志
 
+# Quota Bar 1.3.6
+
+## 新增 / New
+
+- **Kimi 月度额度支持与会员订阅对接**：全面支持展示 Kimi 会员月度权益总额度（`subscriptionBalance`），自动对接 Kimi 会员中心 Connect-RPC 接口与本地凭据（Kimi Desktop / 浏览器），自动维持长期有效的访问会话。
+- **Kimi 三层配额窗口与展示优化**：Kimi 卡片由双窗口扩展支持三层配额窗口展示（5 小时、7 天与月额度），并在卡片底部标明会员等级方案（如 `Allegretto`）。
+- **菜单栏与顶部栏月额度切换**：菜单栏「顶部栏额度」新增「显示月额度」切换项，支持自由设置以月度额度为主展示窗口。
+- **Kimi 闲置状态自动刷新**：优化刷新策略，Kimi 处于闲置状态时依然自动按策略进行后台配额同步。
+
+**Kimi monthly quota & membership integration**: supports full display of Kimi membership monthly quotas (`subscriptionBalance`) by integrating the Kimi Connect-RPC gateway and discovering local credentials from Kimi Desktop / Chromium browsers.
+**Kimi 3-tier quota windows**: expands Kimi quota windows to display 5-hour, 7-day, and monthly quotas simultaneously, with user membership tier (e.g. `Allegretto`) displayed.
+**Menu bar monthly quota switch**: added "Show monthly quota" option in menu bar quota preferences.
+**Idle state refresh**: ensures Kimi quota automatically syncs in the background even when the CLI process is idle.
+
 # Quota Bar 1.3.5
 
 - **启动空白窗口修复**：移除空的 SwiftUI 设置场景，直接通过 AppKit 启动已有浮窗；设置仍通过浮窗齿轮按钮打开，并保留退出、复制、粘贴等键盘快捷键。
