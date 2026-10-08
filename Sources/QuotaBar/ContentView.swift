@@ -489,6 +489,14 @@ private struct ProviderCard: View {
 
             Spacer(minLength: 0)
 
+            if let resetCards = snapshot.resetCards, resetCards.availableCount > 0 {
+                resetCardsBadge(resetCards)
+            }
+
+            if let prediction = snapshot.resetPrediction {
+                resetPredictionBadge(prediction)
+            }
+
             Text(snapshot.detail)
                 .font(.system(size: 9.5, weight: .medium))
                 .foregroundStyle(.white.opacity(0.38))
@@ -539,6 +547,71 @@ private struct ProviderCard: View {
                         )
                 }
         )
+    }
+
+    @ViewBuilder
+    private func resetCardsBadge(_ cards: ResetCardInfo) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            ForEach(Array(cards.items.enumerated()), id: \.element.id) { index, item in
+                HStack(spacing: 4) {
+                    Image(systemName: "ticket.fill")
+                        .font(.system(size: 7.5))
+                        .foregroundStyle(Color(red: 0.28, green: 0.82, blue: 0.72))
+                    Text(language.text("重置卡 #\(index + 1)", "Pass #\(index + 1)"))
+                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.85))
+                    Text("· " + item.localizedExpiryText(language: language))
+                        .font(.system(size: 8.5, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.48))
+                        .lineLimit(1)
+                }
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2.5)
+                .background(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(Color.white.opacity(0.06))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .stroke(Color.white.opacity(0.09), lineWidth: 0.5)
+                        )
+                )
+                .help(item.tooltipText(language: language))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func resetPredictionBadge(_ prediction: CodexResetPrediction) -> some View {
+        Button {
+            if let url = URL(string: "https://aihot.news/codex-reset") {
+                NSWorkspace.shared.open(url)
+            }
+        } label: {
+            HStack(spacing: 3.5) {
+                Image(systemName: "antenna.radiowaves.left.and.right")
+                    .font(.system(size: 7.5))
+                    .foregroundStyle(Color(red: 1, green: 0.65, blue: 0.3))
+                Text(prediction.displayText)
+                    .font(.system(size: 8.8, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.68))
+                    .lineLimit(1)
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 6.5, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.35))
+            }
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2.5)
+            .background(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(Color(red: 1, green: 0.65, blue: 0.3).opacity(0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .stroke(Color(red: 1, green: 0.65, blue: 0.3).opacity(0.18), lineWidth: 0.5)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .help(prediction.fullTooltip(language: language))
     }
 
     private func balanceBody(_ balance: AccountBalance) -> some View {

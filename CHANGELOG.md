@@ -1,5 +1,17 @@
 # Changelog / 更新日志
 
+# Quota Bar 1.3.7
+
+## 新增 / New
+
+- **Codex 重置卡全部列出与到期时间展示**：Codex 卡片全面支持逐张列出当前账户所有的可用重置卡，并清晰标注每张重置卡的具体到期时间；鼠标悬停可查看秒级精确到期时间与卡券说明。
+- **重置卡每日只读同步策略**：严格遵循按天只读同步与本地持久化缓存，日常高频刷新绝不重复发起额外查询，零写操作、零核销风险。
+- **Tibo 重置监控与预测对接（零模型额度消耗）**：集成 aihot.news/codex-reset 实时重置监控，展示最新重置与发卡动态及历史间隔中位数；基于纯网页解析，不调用任何 AI 模型接口，消耗 0 Token / 0 模型额度，支持一键在浏览器中打开完整日历。
+
+- **Codex multiple reset passes & expiration dates**: lists each individual reset pass in the Codex card with its specific expiration date and time; hovering shows full card details.
+- **Daily read-only caching for reset passes**: strict daily sync and local caching prevents redundant queries during high-frequency refreshes, with zero write calls or consumption risks.
+- **Tibo reset monitor & prediction (zero token cost)**: integrates real-time status and historical reset stats from aihot.news/codex-reset; runs purely via lightweight web scraping without consuming any AI model quota, with one-click browser access.
+
 # Quota Bar 1.3.6
 
 ## 新增 / New

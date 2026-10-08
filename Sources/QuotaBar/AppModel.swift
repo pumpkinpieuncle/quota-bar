@@ -157,6 +157,12 @@ final class AppModel: ObservableObject {
                     if !usage.balances.isEmpty {
                         merged[index].balances = usage.balances
                     }
+                    if let resetCards = usage.resetCards {
+                        merged[index].resetCards = resetCards
+                    }
+                    if let prediction = await CodexResetMonitorClient.shared.fetchIfNeeded(force: forceRemote) {
+                        merged[index].resetPrediction = prediction
+                    }
                     merged[index].source = currentLanguage.text(
                         "Codex 账号额度 + 本地任务状态",
                         "Codex account quota + local task status"
@@ -176,6 +182,8 @@ final class AppModel: ObservableObject {
                     {
                         merged[index].limits = previous.limits
                         merged[index].balances = previous.balances
+                        merged[index].resetCards = previous.resetCards
+                        merged[index].resetPrediction = previous.resetPrediction
                         merged[index].lastUpdated = previous.lastUpdated
                         merged[index].source = previous.source
                     } else {

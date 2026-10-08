@@ -6,6 +6,7 @@ actor CodexUsageClient {
         let fetchedAt: Date
         let plan: String
         var balances: [AccountBalance] = []
+        var resetCards: ResetCardInfo? = nil
     }
 
     enum UsageError: LocalizedError {
@@ -34,6 +35,23 @@ actor CodexUsageClient {
     private var lastRemoteFetch: Date?
     private var lastResult: UsageResult?
     private var lastResponse: Data?
+    private var cachedResetCards: ResetCardInfo?
+    private var lastResetCardSyncDate: Date?
+
+    init() {
+        if let data = UserDefaults.standard.data(forKey: "codex_reset_cards_cache"),
+           let cached = try? JSONDecoder().decode(ResetCardInfo.self, from: data) {
+            self.cachedResetCards = cached
+            self.lastResetCardSyncDate = cached.lastSyncDate
+        }
+    }
+
+    private func shouldSyncResetCards() -> Bool {
+        guard let lastSync = lastResetCardSyncDate, cachedResetCards != nil else {
+            return true
+        }
+        return !Calendar.current.isDateInToday(lastSync) || Date().timeIntervalSince(lastSync) >= 86_400
+    }
 
     func fetchIfNeeded(
         force: Bool,
@@ -49,7 +67,8 @@ actor CodexUsageClient {
                 return try Self.parseResponse(
                     lastResponse,
                     fetchedAt: lastResult.fetchedAt,
-                    language: language
+                    language: language,
+                    resetCards: cachedResetCards
                 )
             }
             return lastResult
@@ -58,10 +77,23 @@ actor CodexUsageClient {
         let response = try await Task.detached(priority: .utility) {
             try Self.readAccountRateLimits()
         }.value
+
+        // Daily sync for reset cards (synced at most once per calendar day / 24h)
+        if shouldSyncResetCards(),
+           let envelope = try? JSONSerialization.jsonObject(with: response) as? [String: Any],
+           let newCards = Self.parseResetCredits(envelope, syncDate: Date()) {
+            self.cachedResetCards = newCards
+            self.lastResetCardSyncDate = newCards.lastSyncDate
+            if let encoded = try? JSONEncoder().encode(newCards) {
+                UserDefaults.standard.set(encoded, forKey: "codex_reset_cards_cache")
+            }
+        }
+
         let result = try Self.parseResponse(
             response,
             fetchedAt: Date(),
-            language: language
+            language: language,
+            resetCards: cachedResetCards
         )
         lastRemoteFetch = result.fetchedAt
         lastResult = result
@@ -72,7 +104,8 @@ actor CodexUsageClient {
     static func parseResponse(
         _ data: Data,
         fetchedAt: Date = Date(),
-        language: AppLanguage = .chinese
+        language: AppLanguage = .chinese,
+        resetCards: ResetCardInfo? = nil
     ) throws -> UsageResult {
         guard
             let envelope = try JSONSerialization.jsonObject(with: data) as? [String: Any]
@@ -140,11 +173,60 @@ actor CodexUsageClient {
             )
         }
 
+        let finalResetCards: ResetCardInfo? = {
+            if let resetCards { return resetCards }
+            return parseResetCredits(envelope, syncDate: fetchedAt)
+        }()
+
         return UsageResult(
             limits: QuotaWindowSelector.ordered(limits),
             fetchedAt: fetchedAt,
             plan: plan,
-            balances: balances
+            balances: balances,
+            resetCards: finalResetCards
+        )
+    }
+
+    nonisolated static func parseResetCredits(
+        _ envelope: [String: Any],
+        syncDate: Date = Date()
+    ) -> ResetCardInfo? {
+        guard let result = envelope["result"] as? [String: Any],
+              let resetCreditsObj = result["rateLimitResetCredits"] as? [String: Any],
+              let availableCount = LocalCollectors.number(resetCreditsObj["availableCount"])
+        else {
+            return nil
+        }
+        var items: [ResetCardItem] = []
+        if let creditsArray = resetCreditsObj["credits"] as? [[String: Any]] {
+            let activeCredits = creditsArray.filter { ($0["status"] as? String) == "available" }
+            for (idx, credit) in activeCredits.enumerated() {
+                let creditId = credit["id"] as? String ?? "card-\(idx + 1)"
+                let title = credit["title"] as? String ?? "Full reset"
+                let desc = credit["description"] as? String
+                let exp = LocalCollectors.number(credit["expiresAt"]).flatMap {
+                    $0 > 0 ? Date(timeIntervalSince1970: $0) : nil
+                }
+                let granted = LocalCollectors.number(credit["grantedAt"]).flatMap {
+                    $0 > 0 ? Date(timeIntervalSince1970: $0) : nil
+                }
+                items.append(
+                    ResetCardItem(
+                        id: creditId,
+                        title: title,
+                        expiresAt: exp,
+                        grantedAt: granted,
+                        descriptionText: desc
+                    )
+                )
+            }
+        }
+        items.sort { ($0.expiresAt ?? .distantFuture) < ($1.expiresAt ?? .distantFuture) }
+
+        return ResetCardInfo(
+            availableCount: Int(availableCount),
+            items: items,
+            lastSyncDate: syncDate
         )
     }
 

@@ -157,6 +157,98 @@ import Testing
     #expect(usage.balances[0].compactText == "$249.24")
 }
 
+@Test func readsCodexAccountRateLimitsWithResetCredits() throws {
+    let payload = """
+    {
+      "id": 2,
+      "result": {
+        "rateLimits": {
+          "primary": {
+            "usedPercent": 9,
+            "windowDurationMins": 10080,
+            "resetsAt": 1792047916
+          },
+          "secondary": null,
+          "credits": {
+            "hasCredits": true,
+            "unlimited": false,
+            "balance": "36.69"
+          },
+          "planType": "prolite"
+        },
+        "rateLimitResetCredits": {
+          "availableCount": 2,
+          "credits": [
+            {
+              "id": "RateLimitResetCredit_1",
+              "resetType": "codexRateLimits",
+              "status": "available",
+              "grantedAt": 1790708126,
+              "expiresAt": 1793300126,
+              "title": "Full reset",
+              "description": "Thanks for using Codex! You've been granted one free rate limit reset."
+            },
+            {
+              "id": "RateLimitResetCredit_2",
+              "resetType": "codexRateLimits",
+              "status": "available",
+              "grantedAt": 1791415490,
+              "expiresAt": 1794007490,
+              "title": "Full reset",
+              "description": "Thanks for using Codex! You've been granted one free rate limit reset."
+            }
+          ]
+        }
+      }
+    }
+    """
+    let usage = try CodexUsageClient.parseResponse(
+        Data(payload.utf8),
+        fetchedAt: Date(timeIntervalSince1970: 1790492000),
+        language: .chinese
+    )
+    #expect(usage.resetCards != nil)
+    #expect(usage.resetCards?.availableCount == 2)
+    #expect(usage.resetCards?.items.count == 2)
+    #expect(usage.resetCards?.items[0].id == "RateLimitResetCredit_1")
+    #expect(usage.resetCards?.items[0].expiresAt == Date(timeIntervalSince1970: 1793300126))
+    #expect(usage.resetCards?.items[0].localizedExpiryText(language: .chinese).contains("到期") == true)
+    #expect(usage.resetCards?.items[1].id == "RateLimitResetCredit_2")
+    #expect(usage.resetCards?.items[1].expiresAt == Date(timeIntervalSince1970: 1794007490))
+    #expect(usage.resetCards?.items[1].localizedExpiryText(language: .chinese).contains("到期") == true)
+    #expect(usage.resetCards?.title == "Full reset")
+    #expect(usage.resetCards?.nextExpiry == Date(timeIntervalSince1970: 1793300126))
+    #expect(usage.resetCards?.expiryText(language: .chinese)?.contains("到期") == true)
+    #expect(usage.resetCards?.fullTooltip(language: .chinese).contains("每日只读同步") == true)
+}
+
+@Test func parsesCodexResetPredictionFromAIHotHTML() {
+    let html = """
+    <section class="cr-wash">
+      <div>
+        <p class="inline-flex items-center gap-2 text-[13px] font-medium text-ok-ink">
+          <span class="cr-dot"></span>当前没有等待生效的重置
+        </p>
+        <h2 class="mt-3 text-[20px] font-[650] text-ink">上一次重置卡发放：10月8日确认</h2>
+      </div>
+    </section>
+    <dl>
+      <div><dt>近 90 天额度重置</dt><dd>25 次</dd></div>
+      <div><dt>近 90 天发重置卡</dt><dd>10 次</dd></div>
+      <div><dt>重置间隔中位数</dt><dd>2.2 天</dd></div>
+      <div><dt>上次额度重置</dt><dd>10月7日</dd></div>
+    </dl>
+    """
+    let prediction = CodexResetMonitorClient.parseHTML(html)
+    #expect(prediction != nil)
+    #expect(prediction?.status == "当前没有等待生效的重置")
+    #expect(prediction?.headline == "上一次重置卡发放：10月8日确认")
+    #expect(prediction?.medianInterval == "2.2 天")
+    #expect(prediction?.lastReset == "10月7日")
+    #expect(prediction?.displayText == "上一次重置卡发放：10月8日确认 · 中位数 2.2 天")
+    #expect(prediction?.fullTooltip(language: .chinese).contains("零模型额度消耗") == true)
+}
+
 @Test func codexExecutableFindsWorkingBinary() {
     guard let executable = CodexUsageClient.codexExecutable() else { return }
     let path = executable.path
@@ -178,6 +270,10 @@ import Testing
     #expect(!usage.limits.isEmpty)
     #expect(usage.limits[0].remainingPercent > 0)
     #expect(!usage.plan.isEmpty)
+    if let cards = usage.resetCards {
+        print("LIVE CODEX RESET CARDS: count=\(cards.availableCount), expiry=\(String(describing: cards.nextExpiry))")
+        #expect(cards.availableCount >= 0)
+    }
 }
 
 @Test func liveAntigravityFetchSucceeds() async throws {

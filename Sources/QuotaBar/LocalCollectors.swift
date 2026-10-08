@@ -83,6 +83,17 @@ enum LocalCollectors {
         let root = home.appending(path: ".codex/sessions")
         let isRunning = processText.localizedCaseInsensitiveContains("/codex")
             || processText.localizedCaseInsensitiveContains("CodexCLI.app")
+        var cachedResetCards: ResetCardInfo? = nil
+        if let data = UserDefaults.standard.data(forKey: "codex_reset_cards_cache"),
+           let cached = try? JSONDecoder().decode(ResetCardInfo.self, from: data) {
+            cachedResetCards = cached
+        }
+        var cachedPrediction: CodexResetPrediction? = nil
+        if let data = UserDefaults.standard.data(forKey: "codex_reset_prediction_cache"),
+           let cached = try? JSONDecoder().decode(CodexResetPrediction.self, from: data) {
+            cachedPrediction = cached
+        }
+
         guard let latest = latestFile(in: root, named: nil, suffix: ".jsonl") else {
             let installed = fm.fileExists(atPath: home.appending(path: ".codex").path)
                 || CodexUsageClient.codexExecutable() != nil
@@ -94,7 +105,9 @@ enum LocalCollectors {
                 source: language.text("本地会话", "Local sessions"),
                 lastUpdated: nil,
                 setupAvailable: false,
-                isInstalled: installed
+                isInstalled: installed,
+                resetCards: cachedResetCards,
+                resetPrediction: cachedPrediction
             )
         }
 
@@ -172,7 +185,9 @@ enum LocalCollectors {
             ),
             lastUpdated: modified,
             setupAvailable: false,
-            isInstalled: true
+            isInstalled: true,
+            resetCards: cachedResetCards,
+            resetPrediction: cachedPrediction
         )
     }
 

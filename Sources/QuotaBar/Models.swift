@@ -388,6 +388,122 @@ enum QuotaWindowSelector {
     }
 }
 
+struct ResetCardItem: Equatable, Sendable, Codable, Identifiable {
+    var id: String
+    var title: String
+    var expiresAt: Date?
+    var grantedAt: Date?
+    var descriptionText: String?
+
+    func localizedExpiryText(language: AppLanguage) -> String {
+        guard let expiresAt else {
+            return language.text("永久有效", "No expiration")
+        }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: language == .chinese ? "zh_CN" : "en_US")
+        formatter.dateFormat = language == .chinese ? "M月d日 HH:mm" : "MMM d, HH:mm"
+        return language.text("\(formatter.string(from: expiresAt)) 到期", "Expires \(formatter.string(from: expiresAt))")
+    }
+
+    func tooltipText(language: AppLanguage) -> String {
+        var lines: [String] = []
+        lines.append(title)
+        if let expiresAt {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: language == .chinese ? "zh_CN" : "en_US")
+            formatter.dateFormat = language == .chinese ? "yyyy年M月d日 HH:mm:ss" : "MMM d, yyyy, HH:mm:ss"
+            lines.append(language.text("到期时间：\(formatter.string(from: expiresAt))", "Expires: \(formatter.string(from: expiresAt))"))
+        }
+        if let desc = descriptionText, !desc.isEmpty {
+            lines.append(desc)
+        }
+        return lines.joined(separator: "\n")
+    }
+}
+
+struct ResetCardInfo: Equatable, Sendable, Codable {
+    var availableCount: Int
+    var items: [ResetCardItem]
+    var lastSyncDate: Date
+
+    init(
+        availableCount: Int,
+        items: [ResetCardItem] = [],
+        lastSyncDate: Date = Date()
+    ) {
+        self.availableCount = availableCount
+        self.items = items
+        self.lastSyncDate = lastSyncDate
+    }
+
+    var nextExpiry: Date? {
+        items.compactMap(\.expiresAt).sorted().first
+    }
+
+    var title: String? {
+        items.first?.title
+    }
+
+    func expiryText(language: AppLanguage) -> String? {
+        guard let nextExpiry else { return nil }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: language == .chinese ? "zh_CN" : "en_US")
+        formatter.dateFormat = language == .chinese ? "M月d日到期" : "Expires MMM d"
+        return formatter.string(from: nextExpiry)
+    }
+
+    func fullTooltip(language: AppLanguage) -> String {
+        var lines: [String] = []
+        let cardText = language.text(
+            "Codex 重置卡 \(availableCount) 张可用（每日只读同步）",
+            "Codex Reset Passes: \(availableCount) available (synced daily)"
+        )
+        lines.append(cardText)
+        for (i, item) in items.enumerated() {
+            lines.append(language.text("• 卡 \(i + 1)：\(item.localizedExpiryText(language: language))", "• Card \(i + 1): \(item.localizedExpiryText(language: language))"))
+        }
+        return lines.joined(separator: "\n")
+    }
+}
+
+struct CodexResetPrediction: Equatable, Sendable, Codable {
+    var status: String
+    var headline: String
+    var medianInterval: String
+    var lastReset: String
+    var fetchedAt: Date
+
+    var displayText: String {
+        if !headline.isEmpty && !medianInterval.isEmpty {
+            return "\(headline) · 中位数 \(medianInterval)"
+        } else if !headline.isEmpty {
+            return headline
+        } else if !status.isEmpty {
+            return status
+        }
+        return "Tibo 重置监控"
+    }
+
+    func fullTooltip(language: AppLanguage) -> String {
+        var lines: [String] = []
+        lines.append(language.text("📡 Tibo 重置监控 (aihot.news) · 零模型额度消耗", "📡 Tibo Reset Monitor (aihot.news) · Zero token usage"))
+        if !status.isEmpty {
+            lines.append(language.text("当前状态：\(status)", "Status: \(status)"))
+        }
+        if !headline.isEmpty {
+            lines.append(language.text("动态：\(headline)", "Update: \(headline)"))
+        }
+        if !medianInterval.isEmpty {
+            lines.append(language.text("间隔中位数：\(medianInterval)", "Median interval: \(medianInterval)"))
+        }
+        if !lastReset.isEmpty {
+            lines.append(language.text("上次额度重置：\(lastReset)", "Last quota reset: \(lastReset)"))
+        }
+        lines.append(language.text("点击打开网页查看完整历史日历与推文", "Click to view full calendar & tweets in browser"))
+        return lines.joined(separator: "\n")
+    }
+}
+
 struct ProviderSnapshot: Identifiable, Equatable, Sendable {
     let id: ProviderID
     var activity: ActivityState
@@ -398,6 +514,8 @@ struct ProviderSnapshot: Identifiable, Equatable, Sendable {
     var setupAvailable: Bool
     var isInstalled: Bool
     var balances: [AccountBalance] = []
+    var resetCards: ResetCardInfo? = nil
+    var resetPrediction: CodexResetPrediction? = nil
 
     static func placeholder(_ id: ProviderID) -> ProviderSnapshot {
         ProviderSnapshot(
@@ -408,7 +526,9 @@ struct ProviderSnapshot: Identifiable, Equatable, Sendable {
             source: "本地只读",
             lastUpdated: nil,
             setupAvailable: false,
-            isInstalled: false
+            isInstalled: false,
+            resetCards: nil,
+            resetPrediction: nil
         )
     }
 }
