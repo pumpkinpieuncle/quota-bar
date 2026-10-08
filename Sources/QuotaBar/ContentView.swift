@@ -315,7 +315,7 @@ struct ContentView: View {
         return HStack(spacing: 5) {
             BrandLogoView(
                 provider: snapshot.id,
-                size: 12,
+                size: 13.5,
                 dimmed: snapshot.activity == .offline
             )
             Text(snapshot.id.title)
@@ -474,11 +474,18 @@ private struct ProviderCard: View {
             HStack(spacing: 7) {
                 BrandLogoView(
                     provider: snapshot.id,
-                    size: 14,
+                    size: 16,
                     dimmed: snapshot.activity == .offline
                 )
-                .frame(width: 23, height: 23)
-                .background(accent.opacity(0.13), in: RoundedRectangle(cornerRadius: 7))
+                .frame(width: 25, height: 25)
+                .background(
+                    RoundedRectangle(cornerRadius: 7.5, style: .continuous)
+                        .fill(accent.opacity(0.18))
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 7.5, style: .continuous)
+                        .stroke(accent.opacity(0.28), lineWidth: 0.8)
+                }
 
                 Text(snapshot.id.title)
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
@@ -1422,7 +1429,7 @@ private struct ProviderManagerContent: View {
         let isHidden = preferences.hiddenProviders.contains(provider)
         let isPaused = preferences.pausedProviders.contains(provider)
         return HStack(spacing: 7) {
-            BrandLogoView(provider: provider, size: 13, dimmed: isHidden)
+            BrandLogoView(provider: provider, size: 14.5, dimmed: isHidden)
                 .frame(width: 20)
             Text(provider.title)
                 .font(.system(size: 10.5, weight: .semibold, design: .rounded))
@@ -1505,7 +1512,7 @@ private struct ProviderManagerContent: View {
     private var deepSeekSetup: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                BrandLogoView(provider: .deepseek, size: 14)
+                BrandLogoView(provider: .deepseek, size: 15)
                 Text("DeepSeek")
                     .font(.system(size: 11.5, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.92))
