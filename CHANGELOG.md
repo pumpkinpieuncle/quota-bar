@@ -1,5 +1,17 @@
 # Changelog / 更新日志
 
+# Quota Bar 1.3.9
+
+## 新增与修复 / Highlights & Fixes
+
+- **真实官方品牌矢量 Logo**：全面升级所有支持的模型服务商 Logo 为官方真实权威矢量图标（OpenAI 祖母绿风车结、Claude 赤陶星火、Kimi 科技蓝几何 K、DeepSeek 蓝鲸、xAI Grok 纯白环带、Google Gemini 四色彩晕星火）。
+- **设置浮窗防透底与半透明遮罩**：修复设置弹窗开启时底层主卡片文字、百分比与进度圆环隐约透出的问题；为设置浮窗采用 100% 实心深黑底色，并在背后叠加高质感暗色遮罩，彻底杜绝文字穿透。
+- **设置项「额度窗口」与「顶部栏显示」解耦重构**：将原本挤压在同一卡片内的两个分段选择器独立拆分为两项设置，给予充足布局宽度，彻底修复“5 小时”等标签左侧被挤压截断的排版问题。
+
+- **Official vector brand logos**: fully upgraded all provider icons to their authentic, official vector branding (OpenAI, Claude, Kimi, DeepSeek, Grok, Gemini).
+- **Settings overlay opacity & backdrop fix**: resolved background bleed-through where underlying card text and progress rings showed through the settings panel.
+- **Refined Quota Window & Menu Bar Display rows**: decoupled quota window and menu bar display into two distinct, spacious setting rows, eliminating text clipping on segmented options.
+
 # Quota Bar 1.3.8
 
 ## 新增 / New

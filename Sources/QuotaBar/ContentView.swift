@@ -73,6 +73,10 @@ struct ContentView: View {
             }
 
             if showSettings, preferences.panelLayout == .standard {
+                Color.black.opacity(0.65)
+                    .clipShape(RoundedRectangle(cornerRadius: panelCornerRadius, style: .continuous))
+                    .transition(.opacity)
+
                 SettingsOverlay(
                     model: model,
                     isPresented: $showSettings,
@@ -908,7 +912,7 @@ private struct SettingsOverlay: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(red: 0.075, green: 0.085, blue: 0.105).opacity(0.97))
+                .fill(Color(red: 0.085, green: 0.095, blue: 0.115))
                 .overlay {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
@@ -954,7 +958,8 @@ private struct SettingsOverlay: View {
                 launchAtLoginRow
                 updateRow
                 refreshRow
-                summaryRow
+                quotaWindowRow
+                menuBarDisplayRow
                 warningRow
                 layoutRow
                 hudRow
@@ -1133,33 +1138,41 @@ private struct SettingsOverlay: View {
         }
     }
 
-    private var summaryRow: some View {
+    private var quotaWindowRow: some View {
         settingRow(
-            title: language.text("摘要显示", "Summary display"),
+            title: language.text("额度窗口", "Quota window"),
             detail: language.text(
-                "额度窗口 · 顶部栏显示方式",
-                "Quota window · menu bar display"
+                "卡片及统计优先计算的周期",
+                "Primary window for cards and stats"
             )
         ) {
-            HStack(spacing: 8) {
-                Picker("", selection: $preferences.quotaWindow) {
-                    ForEach(QuotaWindowPreference.allCases) { window in
-                        Text(window.label(language: language)).tag(window)
-                    }
+            Picker("", selection: $preferences.quotaWindow) {
+                ForEach(QuotaWindowPreference.allCases) { window in
+                    Text(window.label(language: language)).tag(window)
                 }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .frame(width: 120)
-
-                Picker("", selection: $preferences.menuBarDisplayMode) {
-                    ForEach(MenuBarDisplayMode.allCases) { mode in
-                        Text(mode.label(language: language)).tag(mode)
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .frame(width: 152)
             }
+            .labelsHidden()
+            .pickerStyle(.segmented)
+            .frame(width: 220)
+        }
+    }
+
+    private var menuBarDisplayRow: some View {
+        settingRow(
+            title: language.text("顶部栏显示", "Menu bar display"),
+            detail: language.text(
+                "菜单栏额度完整展开或跑马灯滚动",
+                "Show all quotas or scroll marquee"
+            )
+        ) {
+            Picker("", selection: $preferences.menuBarDisplayMode) {
+                ForEach(MenuBarDisplayMode.allCases) { mode in
+                    Text(mode.label(language: language)).tag(mode)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.segmented)
+            .frame(width: 130)
         }
     }
 
