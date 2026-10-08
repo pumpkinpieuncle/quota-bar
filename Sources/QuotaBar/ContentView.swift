@@ -1,11 +1,36 @@
 import AppKit
 import SwiftUI
 
+enum SettingsTab: String, CaseIterable, Identifiable {
+    case general
+    case providers
+
+    var id: String { rawValue }
+
+    func title(language: AppLanguage) -> String {
+        switch self {
+        case .general:
+            return language.text("常规设置", "General")
+        case .providers:
+            return language.text("模型管理", "Models")
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .general:
+            return "gearshape.fill"
+        case .providers:
+            return "slider.horizontal.3"
+        }
+    }
+}
+
 struct ContentView: View {
     @ObservedObject var model: AppModel
     @ObservedObject private var preferences: AppPreferences
     @State private var showSettings = false
-    @State private var showProviderManager = false
+    @State private var settingsTab: SettingsTab = .general
     let onHideToMenuBar: () -> Void
     let onResetGeometry: () -> Void
 
@@ -51,20 +76,11 @@ struct ContentView: View {
                 SettingsOverlay(
                     model: model,
                     isPresented: $showSettings,
-                    showProviderManager: $showProviderManager,
+                    selectedTab: $settingsTab,
                     onResetGeometry: onResetGeometry
                 )
                     .padding(10)
                     .transition(.scale(scale: 0.96).combined(with: .opacity))
-            }
-
-            if showProviderManager, preferences.panelLayout == .standard {
-                ProviderManagerOverlay(
-                    model: model,
-                    isPresented: $showProviderManager
-                )
-                .padding(10)
-                .transition(.scale(scale: 0.96).combined(with: .opacity))
             }
         }
         // The panel is user-resizable, so the content always fills whatever
@@ -202,7 +218,10 @@ struct ContentView: View {
                             quotaWindow: preferences.quotaWindow,
                             lowQuotaThreshold: preferences.lowQuotaThreshold,
                             installClaudeCollector: model.installClaudeCollector,
-                            manageProviders: { showProviderManager = true }
+                            manageProviders: {
+                                settingsTab = .providers
+                                showSettings = true
+                            }
                         )
                     }
                 }
@@ -752,54 +771,116 @@ private struct ProviderCard: View {
     }
 }
 
+private struct TabItemButton: View {
+    let tab: SettingsTab
+    let isSelected: Bool
+    let language: AppLanguage
+    let namespace: Namespace.ID
+    let action: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: tab.icon)
+                    .font(.system(size: 10.5, weight: .semibold))
+                Text(tab.title(language: language))
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+            }
+            .foregroundStyle(
+                isSelected
+                    ? Color.white
+                    : (isHovered ? Color.white.opacity(0.85) : Color.white.opacity(0.55))
+            )
+            .padding(.horizontal, 11)
+            .padding(.vertical, 5)
+            .background {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.18),
+                                    Color.white.opacity(0.11)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .matchedGeometryEffect(id: "activeTabIndicator", in: namespace)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .stroke(Color.white.opacity(0.18), lineWidth: 0.8)
+                        )
+                        .shadow(color: .black.opacity(0.35), radius: 3, y: 1)
+                } else if isHovered {
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(Color.white.opacity(0.05))
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+    }
+}
+
 private struct SettingsOverlay: View {
     @ObservedObject var model: AppModel
     @ObservedObject private var preferences: AppPreferences
     @ObservedObject private var hud: HUDBridge
     @Binding var isPresented: Bool
-    @Binding var showProviderManager: Bool
+    @Binding var selectedTab: SettingsTab
     let onResetGeometry: () -> Void
     @State private var copiedHUDURL = false
     @State private var launchAtLoginError: String?
+    @Namespace private var tabNamespace
 
     init(
         model: AppModel,
         isPresented: Binding<Bool>,
-        showProviderManager: Binding<Bool>,
+        selectedTab: Binding<SettingsTab>,
         onResetGeometry: @escaping () -> Void
     ) {
         self.model = model
         _preferences = ObservedObject(wrappedValue: model.preferences)
         _hud = ObservedObject(wrappedValue: model.hud)
         _isPresented = isPresented
-        _showProviderManager = showProviderManager
+        _selectedTab = selectedTab
         self.onResetGeometry = onResetGeometry
     }
 
     private var language: AppLanguage { preferences.language }
 
+    private var headerSubtitle: String {
+        switch selectedTab {
+        case .general:
+            return "Quota Bar \(model.versionText)"
+        case .providers:
+            return language.text("模型排序、可见性与授权", "Order, visibility & auth")
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 1.5) {
                     Text(language.text("设置", "Settings"))
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .font(.system(size: 14.5, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white.opacity(0.95))
-                    Text("Quota Bar \(model.versionText)")
-                        .font(.system(size: 10, weight: .medium))
+                    Text(headerSubtitle)
+                        .font(.system(size: 9.5, weight: .medium))
                         .foregroundStyle(.white.opacity(0.42))
+                        .lineLimit(1)
                 }
-                Spacer()
-                Button {
-                    isPresented = false
-                    showProviderManager = true
-                } label: {
-                    Image(systemName: "list.bullet")
-                        .font(.system(size: 10, weight: .bold))
-                        .frame(width: 28, height: 28)
-                }
-                .buttonStyle(HeaderButtonStyle())
-                .help(language.text("模型排序与隐藏", "Model order and visibility"))
+
+                Spacer(minLength: 4)
+
+                tabPicker
+
+                Spacer(minLength: 4)
 
                 Button {
                     isPresented = false
@@ -811,37 +892,17 @@ private struct SettingsOverlay: View {
                 .buttonStyle(HeaderButtonStyle())
             }
 
-            // Two columns on a normally sized panel, one when it is narrow, so
-            // the settings still fit without scrolling at the default height.
-            ScrollView(.vertical, showsIndicators: false) {
-                LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 330), spacing: 8)],
-                    alignment: .leading,
-                    spacing: 8
-                ) {
-                    languageRow
-                    launchAtLoginRow
-                    updateRow
-                    refreshRow
-                    summaryRow
-                    warningRow
-                    layoutRow
-                    hudRow
+            Group {
+                switch selectedTab {
+                case .general:
+                    generalSettingsContent
+                case .providers:
+                    ProviderManagerContent(model: model)
                 }
             }
-            .scrollBounceBehavior(.basedOnSize)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            HStack(spacing: 7) {
-                Image(systemName: "leaf.fill")
-                    .foregroundStyle(Color(red: 0.43, green: 0.92, blue: 0.66))
-                Text(language.text(
-                    "状态只来自本地，不调用模型 · 顶部栏被遮挡时按 ⌥⌘Q",
-                    "Local status never calls a model · Press ⌥⌘Q if the menu bar is hidden"
-                ))
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.5))
-                    .lineLimit(2)
-            }
+            footerStatus
         }
         .padding(15)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -854,6 +915,76 @@ private struct SettingsOverlay: View {
                 }
         )
         .shadow(color: .black.opacity(0.42), radius: 20, y: 8)
+    }
+
+    private var tabPicker: some View {
+        HStack(spacing: 3) {
+            ForEach(SettingsTab.allCases) { tab in
+                TabItemButton(
+                    tab: tab,
+                    isSelected: selectedTab == tab,
+                    language: language,
+                    namespace: tabNamespace
+                ) {
+                    withAnimation(.spring(response: 0.26, dampingFraction: 0.82)) {
+                        selectedTab = tab
+                    }
+                }
+            }
+        }
+        .padding(3)
+        .background(
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(Color.black.opacity(0.3))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 0.8)
+                )
+        )
+    }
+
+    private var generalSettingsContent: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 330), spacing: 8)],
+                alignment: .leading,
+                spacing: 8
+            ) {
+                languageRow
+                launchAtLoginRow
+                updateRow
+                refreshRow
+                summaryRow
+                warningRow
+                layoutRow
+                hudRow
+            }
+        }
+        .scrollBounceBehavior(.basedOnSize)
+    }
+
+    @ViewBuilder
+    private var footerStatus: some View {
+        HStack(spacing: 7) {
+            if selectedTab == .general {
+                Image(systemName: "leaf.fill")
+                    .foregroundStyle(Color(red: 0.43, green: 0.92, blue: 0.66))
+                Text(language.text(
+                    "状态只来自本地，不调用模型 · 顶部栏被遮挡时按 ⌥⌘Q",
+                    "Local status never calls a model · Press ⌥⌘Q if the menu bar is hidden"
+                ))
+            } else {
+                Image(systemName: "slider.horizontal.2.square")
+                    .foregroundStyle(Color(red: 0.43, green: 0.82, blue: 0.98))
+                Text(language.text(
+                    "调整顺序、显示隐藏或暂停刷新 · DeepSeek 凭证安全存于钥匙串",
+                    "Reorder, hide or pause quotas · DeepSeek credentials stored securely in Keychain"
+                ))
+            }
+        }
+        .font(.system(size: 10, weight: .medium))
+        .foregroundStyle(.white.opacity(0.5))
+        .lineLimit(2)
     }
 
     private var languageRow: some View {
@@ -1227,73 +1358,51 @@ private struct SettingsOverlay: View {
     }
 }
 
-private struct ProviderManagerOverlay: View {
+private struct ProviderManagerContent: View {
     @ObservedObject var model: AppModel
     @ObservedObject private var preferences: AppPreferences
-    @Binding var isPresented: Bool
     @State private var apiKey = ""
     @State private var isSaving = false
 
-    init(model: AppModel, isPresented: Binding<Bool>) {
+    init(model: AppModel) {
         self.model = model
         _preferences = ObservedObject(wrappedValue: model.preferences)
-        _isPresented = isPresented
     }
 
     private var language: AppLanguage { preferences.language }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 11) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(language.text("模型管理", "Model management"))
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.95))
-                    Text(language.text(
-                        "调整排序、隐藏服务，或暂停单个额度刷新",
-                        "Reorder, hide, or pause quota refresh per service"
-                    ))
-                    .font(.system(size: 9.5, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.42))
-                }
-                Spacer()
-                Button {
-                    isPresented = false
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 10, weight: .bold))
-                        .frame(width: 28, height: 28)
-                }
-                .buttonStyle(HeaderButtonStyle())
-            }
+        GeometryReader { proxy in
+            if proxy.size.width >= 560 {
+                HStack(alignment: .top, spacing: 12) {
+                    ScrollView(.vertical, showsIndicators: false) {
+                        providerItems
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
+                    .frame(maxWidth: .infinity)
 
-            HStack(alignment: .top, spacing: 12) {
+                    deepSeekSetup
+                        .frame(width: min(320, max(260, proxy.size.width * 0.44)))
+                }
+            } else {
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 6) {
-                        ForEach(Array(preferences.providerOrder.enumerated()), id: \.element) {
-                            index, provider in
-                            providerRow(provider, index: index)
-                        }
+                    VStack(spacing: 12) {
+                        providerItems
+                        deepSeekSetup
                     }
                 }
                 .scrollBounceBehavior(.basedOnSize)
-                .frame(maxWidth: .infinity)
-
-                deepSeekSetup
-                    .frame(width: 300)
             }
         }
-        .padding(15)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(red: 0.075, green: 0.085, blue: 0.105).opacity(0.98))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
-                }
-        )
-        .shadow(color: .black.opacity(0.42), radius: 20, y: 8)
+    }
+
+    private var providerItems: some View {
+        VStack(spacing: 6) {
+            ForEach(Array(preferences.providerOrder.enumerated()), id: \.element) {
+                index, provider in
+                providerRow(provider, index: index)
+            }
+        }
     }
 
     private func providerRow(_ provider: ProviderID, index: Int) -> some View {
