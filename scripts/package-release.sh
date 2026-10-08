@@ -140,13 +140,26 @@ APPLESCRIPT
 
 sync
 rm -rf "$mount_dir/.fseventsd" "$mount_dir/.Trashes"
-if ! /usr/bin/hdiutil detach "$mounted_device" -quiet; then
-    echo "DMG is still busy; retrying detach..." >&2
-    sleep 2
-    if ! /usr/bin/hdiutil detach "$mounted_device" -quiet; then
-        echo "DMG is still busy; force-detaching temporary image..." >&2
-        /usr/bin/hdiutil detach "$mounted_device" -force -quiet
+detached=false
+for i in {1..10}; do
+    if /usr/bin/hdiutil detach "$mount_dir" -quiet 2>/dev/null || \
+       /usr/bin/hdiutil detach "$mounted_device" -quiet 2>/dev/null; then
+        detached=true
+        break
     fi
+    sleep 2
+    if /usr/bin/hdiutil detach "$mount_dir" -force -quiet 2>/dev/null || \
+       /usr/bin/hdiutil detach "$mounted_device" -force -quiet 2>/dev/null; then
+        detached=true
+        break
+    fi
+    sleep 2
+done
+
+if [[ "$detached" != "true" ]]; then
+    echo "Warning: could not gracefully detach, attempting force diskutil unmount..." >&2
+    diskutil unmount force "$mount_dir" 2>/dev/null || true
+    /usr/bin/hdiutil detach "$mounted_device" -force -quiet 2>/dev/null || true
 fi
 mounted_device=""
 /usr/bin/hdiutil convert "$rw_dmg" \
