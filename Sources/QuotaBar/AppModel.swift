@@ -20,6 +20,7 @@ final class AppModel: ObservableObject {
     private let deepSeekClient = DeepSeekBalanceClient()
     private let kimiClient = KimiUsageClient()
     private let antigravityClient = AntigravityUsageClient()
+    private let grokClient = GrokUsageClient()
     private var scheduledRefresh: Task<Void, Never>?
     private var latestRelease: LatestRelease?
 
@@ -321,6 +322,57 @@ final class AppModel: ObservableObject {
                         merged[index].limits = previous.limits
                         merged[index].lastUpdated = previous.lastUpdated
                         merged[index].source = previous.source
+                    }
+                }
+            }
+        }
+
+        if
+            bundle.grok.isInstalled,
+            !preferences.hiddenProviders.contains(.grok),
+            !preferences.pausedProviders.contains(.grok)
+        {
+            do {
+                let usage = try await grokClient.fetchIfNeeded(
+                    force: forceRemote,
+                    language: currentLanguage
+                )
+                if let index = merged.firstIndex(where: { $0.id == .grok }) {
+                    merged[index].limits = usage.limits
+                    merged[index].lastUpdated = usage.fetchedAt
+                    if !usage.balances.isEmpty {
+                        merged[index].balances = usage.balances
+                    }
+                    if !usage.plan.isEmpty {
+                        let currentDetail = merged[index].detail
+                        if currentDetail.isEmpty || currentDetail == "Grok" {
+                            merged[index].detail = usage.plan
+                        } else if !currentDetail.localizedCaseInsensitiveContains(usage.plan) {
+                            merged[index].detail = "\(usage.plan) · \(currentDetail)"
+                        }
+                    }
+                    merged[index].source = currentLanguage.text(
+                        "Grok 官方配额服务 + 本地状态",
+                        "Official Grok quota service + local state"
+                    )
+                }
+            } catch {
+                if let index = merged.firstIndex(where: { $0.id == .grok }) {
+                    if
+                        preserveRemoteDataOnFailure,
+                        let previous = previousSnapshots.first(where: {
+                            $0.id == .grok && !$0.limits.isEmpty
+                        })
+                    {
+                        merged[index].limits = previous.limits
+                        merged[index].balances = previous.balances
+                        merged[index].lastUpdated = previous.lastUpdated
+                        merged[index].source = previous.source
+                    } else if merged[index].limits.isEmpty {
+                        merged[index].detail = currentLanguage.text(
+                            "\(merged[index].detail) · 额度需在 xAI 控制台查看",
+                            "\(merged[index].detail) · check quota in the xAI console"
+                        )
                     }
                 }
             }

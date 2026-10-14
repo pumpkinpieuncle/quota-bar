@@ -40,7 +40,7 @@ A lightweight native macOS floating panel for Codex, Claude Code, Kimi Code, Ant
 | Kimi | Kimi Code 官方 `/usages` | ✅ |
 | DeepSeek | 官方 `GET /user/balance`（需 API Key） | 需手动开启 |
 | Antigravity | 本地 Language Server gRPC/HTTPS，实时读取 5 小时与周额度（支持 Gemini、Claude、GPT 模型） | 需手动开启 |
-| Grok | 本机工作状态与所用模型（xAI 未公开额度接口） | 需手动开启 |
+| Grok | 官方配额服务 `billing?format=credits` 实时读取周额度与重置时间（支持 X Premium / SuperGrok）及本机工作状态 | 需手动开启 |
 
 DeepSeek、Antigravity、Grok 默认隐藏，在浮窗的“模型管理”里打开即可。
 
@@ -53,7 +53,7 @@ Quota Bar **不会为了显示状态而消耗 Codex、Claude 或 Kimi 的模型�
 - Kimi：读取本地会话事件；额度只通过 Kimi Code 官方 `/usages` HTTP 端点同步，不是模型生成请求。
 - DeepSeek：只请求官方 `GET /user/balance` 账户余额接口，不调用对话或补全模型；隐藏后停止远程同步。
 - Antigravity：通过本地 Antigravity Language Server 服务的 RetrieveUserQuotaSummary 读取真实的 Gemini Models 与 Claude/GPT 模型的 5 小时及周额度，完全本地读取，不发起模型推理调用，不消耗额外 Token。
-- Grok：只读 `~/.grok` 里的本地配置和最近改动时间，完全不联网。
+- Grok：通过 Grok CLI 官方配额端点读取周额度与精确重置时间（支持 X Premium / SuperGrok），只读取账单配额状态，不发起模型推理调用。
 - HUD 外接屏复用浮窗已有的快照，不会产生任何额外请求。
 - 不包含模型 SDK、遥测或第三方分析。
 

@@ -845,4 +845,12 @@ import Testing
     #expect(balances[0].compactText == "¥15")
 }
 
+@Test func liveGrokFetchSucceeds() async throws {
+    let client = GrokUsageClient()
+    let result = try await client.fetchIfNeeded(force: true, language: .chinese)
+    print("LIVE GROK LIMITS: \(result.limits.map { "\($0.label): \(Int($0.clampedRemaining))%" }), plan=\(result.plan)")
+    #expect(!result.limits.isEmpty)
+    #expect(result.limits[0].clampedRemaining > 0)
+}
+
 

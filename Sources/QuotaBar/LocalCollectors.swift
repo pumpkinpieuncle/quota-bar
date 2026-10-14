@@ -703,8 +703,7 @@ enum LocalCollectors {
     }
 
     /// Grok CLI keeps its settings and conversation history under `~/.grok`.
-    /// There is no public quota endpoint, so this reports work state and the
-    /// configured model rather than inventing a percentage.
+    /// Remote quota and subscription tier are enriched asynchronously via GrokUsageClient.
     private static func collectGrok(
         processText: String,
         language: AppLanguage
@@ -725,13 +724,26 @@ enum LocalCollectors {
             )
         }
 
+        var model = "Grok"
         let settings: [String: Any]? = (
             try? Data(contentsOf: root.appending(path: "user-settings.json"))
         )
         .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
-        let model = (settings?["defaultModel"] as? String)
-            ?? (settings?["model"] as? String)
-            ?? "Grok"
+
+        if let settingsModel = (settings?["defaultModel"] as? String) ?? (settings?["model"] as? String), !settingsModel.isEmpty {
+            model = settingsModel
+        } else if let latestSession = latestFile(in: root.appending(path: "sessions"), named: "summary.json", suffix: nil),
+                  let data = try? Data(contentsOf: latestSession),
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let modelId = json["current_model_id"] as? String, !modelId.isEmpty {
+            model = modelId
+        } else if let data = try? Data(contentsOf: root.appending(path: "models_cache.json")),
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let models = json["models"] as? [String: Any],
+                  let firstKey = models.keys.sorted().last {
+            model = firstKey
+        }
+
         let latest = latestFile(in: root, named: nil, suffix: nil)
         let modified = latest.flatMap(modificationDate)
         let recentlyChanged = modified.map { Date().timeIntervalSince($0) < 90 } ?? false
@@ -747,13 +759,10 @@ enum LocalCollectors {
             id: .grok,
             activity: activity,
             limits: [],
-            detail: language.text(
-                "\(model) · 额度需在 xAI 控制台查看",
-                "\(model) · check quota in the xAI console"
-            ),
+            detail: model,
             source: language.text(
-                "Grok CLI 本地状态（xAI 未公开额度接口）",
-                "Local Grok CLI state (xAI exposes no quota endpoint)"
+                "Grok CLI 本地状态",
+                "Local Grok CLI state"
             ),
             lastUpdated: modified,
             setupAvailable: false,
