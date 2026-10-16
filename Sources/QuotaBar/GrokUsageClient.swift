@@ -2,21 +2,32 @@ import Darwin
 import Foundation
 
 actor GrokUsageClient {
+    struct ProductUsageItem: Sendable, Equatable {
+        let product: String
+        let usagePercent: Double
+    }
+
     struct UsageResult: Sendable {
         let limits: [LimitWindow]
         let balances: [AccountBalance]
         let plan: String
+        let totalUsedPercent: Double?
+        let productUsages: [ProductUsageItem]
         let fetchedAt: Date
 
         init(
             limits: [LimitWindow],
             balances: [AccountBalance] = [],
             plan: String = "",
+            totalUsedPercent: Double? = nil,
+            productUsages: [ProductUsageItem] = [],
             fetchedAt: Date
         ) {
             self.limits = limits
             self.balances = balances
             self.plan = plan
+            self.totalUsedPercent = totalUsedPercent
+            self.productUsages = productUsages
             self.fetchedAt = fetchedAt
         }
     }
@@ -61,7 +72,7 @@ actor GrokUsageClient {
             return remoteResult
         }
 
-        // 2. Fallback to latest local unified.jsonl billing logs
+        // 2. Fallback to recent local unified.jsonl billing logs (within 2 hours)
         if let logResult = parseFromLogs(language: language) {
             lastResult = logResult
             return logResult
@@ -104,7 +115,7 @@ actor GrokUsageClient {
                     if let newRefresh = refreshed["refresh_token"] as? String {
                         entry["refresh_token"] = newRefresh
                     }
-                    if let expiresIn = refreshed["expires_in"] as? Double {
+                    if let expiresIn = LocalCollectors.number(refreshed["expires_in"]) {
                         let newExp = Date().addingTimeInterval(expiresIn)
                         let iso = ISO8601DateFormatter()
                         iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -140,6 +151,12 @@ actor GrokUsageClient {
                 entry["key"] = newAccess
                 if let newRefresh = refreshed["refresh_token"] as? String {
                     entry["refresh_token"] = newRefresh
+                }
+                if let expiresIn = LocalCollectors.number(refreshed["expires_in"]) {
+                    let newExp = Date().addingTimeInterval(expiresIn)
+                    let iso = ISO8601DateFormatter()
+                    iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                    entry["expires_at"] = iso.string(from: newExp)
                 }
                 authDict[authKey] = entry
                 if let updatedData = try? JSONSerialization.data(withJSONObject: authDict, options: [.prettyPrinted, .sortedKeys]) {
@@ -251,18 +268,29 @@ actor GrokUsageClient {
             )
         }
 
+        var productUsages: [ProductUsageItem] = []
+        if let products = config["productUsage"] as? [[String: Any]] {
+            for p in products {
+                if let name = p["product"] as? String,
+                   let pct = LocalCollectors.number(p["usagePercent"]) {
+                    productUsages.append(ProductUsageItem(product: name, usagePercent: pct))
+                }
+            }
+        }
+
         let plan = detectPlanName(entry: entry)
 
         return UsageResult(
             limits: limits,
             balances: balances,
             plan: plan,
+            totalUsedPercent: usagePct,
+            productUsages: productUsages,
             fetchedAt: Date()
         )
     }
 
     private func detectPlanName(entry: [String: Any]?) -> String {
-        // 1. Check unified.jsonl for explicit subscriptionTier
         if let logData = try? Data(contentsOf: logsFileURL),
            let logText = String(data: logData, encoding: .utf8) {
             let lines = logText.components(separatedBy: "\n")
@@ -298,6 +326,13 @@ actor GrokUsageClient {
                 continue
             }
 
+            // Only use logs that were recorded within the last 2 hours
+            guard let fetchedAt = (obj["ts"] as? String).flatMap(parseISO8601),
+                  abs(fetchedAt.timeIntervalSinceNow) < 7_200
+            else {
+                continue
+            }
+
             let usagePct = LocalCollectors.number(cfg["creditUsagePercent"]) ?? 0.0
             let remainingPct = max(0.0, min(100.0, 100.0 - usagePct))
 
@@ -318,12 +353,22 @@ actor GrokUsageClient {
                 windowMinutes: 10_080
             )
 
-            let fetchedAt = (obj["ts"] as? String).flatMap(parseISO8601) ?? Date()
+            var productUsages: [ProductUsageItem] = []
+            if let products = cfg["productUsage"] as? [[String: Any]] {
+                for p in products {
+                    if let name = p["product"] as? String,
+                       let pct = LocalCollectors.number(p["usagePercent"]) {
+                        productUsages.append(ProductUsageItem(product: name, usagePercent: pct))
+                    }
+                }
+            }
 
             return UsageResult(
                 limits: [limit],
                 balances: [],
                 plan: plan,
+                totalUsedPercent: usagePct,
+                productUsages: productUsages,
                 fetchedAt: fetchedAt
             )
         }
@@ -340,6 +385,14 @@ actor GrokUsageClient {
             "plan": result.plan,
             "fetchedAt": result.fetchedAt.timeIntervalSince1970
         ]
+        if let totalUsed = result.totalUsedPercent {
+            dict["totalUsedPercent"] = totalUsed
+        }
+        if !result.productUsages.isEmpty {
+            dict["productUsages"] = result.productUsages.map {
+                ["product": $0.product, "usagePercent": $0.usagePercent]
+            }
+        }
         if let primary = result.limits.first {
             dict["remainingPercent"] = primary.remainingPercent
             dict["label"] = primary.label
@@ -375,10 +428,23 @@ actor GrokUsageClient {
             windowMinutes: windowMinutes
         )
 
+        let totalUsed = LocalCollectors.number(json["totalUsedPercent"])
+        var productUsages: [ProductUsageItem] = []
+        if let prods = json["productUsages"] as? [[String: Any]] {
+            for p in prods {
+                if let name = p["product"] as? String,
+                   let pct = LocalCollectors.number(p["usagePercent"]) {
+                    productUsages.append(ProductUsageItem(product: name, usagePercent: pct))
+                }
+            }
+        }
+
         return UsageResult(
             limits: [limit],
             balances: [],
             plan: plan,
+            totalUsedPercent: totalUsed,
+            productUsages: productUsages,
             fetchedAt: fetchedAt
         )
     }

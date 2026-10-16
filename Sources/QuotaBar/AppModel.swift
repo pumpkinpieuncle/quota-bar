@@ -344,16 +344,39 @@ final class AppModel: ObservableObject {
                         merged[index].balances = usage.balances
                     }
                     if !usage.plan.isEmpty {
-                        let currentDetail = merged[index].detail
-                        if currentDetail.isEmpty || currentDetail == "Grok" {
-                            merged[index].detail = usage.plan
-                        } else if !currentDetail.localizedCaseInsensitiveContains(usage.plan) {
-                            merged[index].detail = "\(usage.plan) · \(currentDetail)"
+                        var detailText = usage.plan
+                        if let totalUsed = usage.totalUsedPercent {
+                            let totalInt = Int(totalUsed.rounded())
+                            let activeProducts = usage.productUsages.compactMap { item -> String? in
+                                let shortName: String
+                                switch item.product.lowercased() {
+                                case "grokchat", "chat": shortName = "Chat"
+                                case "grokbot", "bot": shortName = "Bot"
+                                case "grokimagine", "imagine": shortName = "Imagine"
+                                default: shortName = item.product.replacingOccurrences(of: "Grok", with: "")
+                                }
+                                let pct = Int(item.usagePercent.rounded())
+                                guard pct > 0 else { return nil }
+                                return "\(shortName) \(pct)%"
+                            }
+                            if !activeProducts.isEmpty {
+                                detailText += " · \(currentLanguage.text("已用", "used")) \(totalInt)% (\(activeProducts.joined(separator: " · ")))"
+                            } else {
+                                detailText += " · \(currentLanguage.text("已用", "used")) \(totalInt)%"
+                            }
+                        } else {
+                            let currentDetail = merged[index].detail
+                            if currentDetail.isEmpty || currentDetail == "Grok" {
+                                detailText = usage.plan
+                            } else if !currentDetail.localizedCaseInsensitiveContains(usage.plan) {
+                                detailText = "\(usage.plan) · \(currentDetail)"
+                            }
                         }
+                        merged[index].detail = detailText
                     }
                     merged[index].source = currentLanguage.text(
-                        "Grok 官方配额服务 + 本地状态",
-                        "Official Grok quota service + local state"
+                        "Grok 官方配额服务（含 Grok 与 Grok Bot 共享额度）",
+                        "Official Grok quota service (shared across Grok & Grok Bot)"
                     )
                 }
             } catch {

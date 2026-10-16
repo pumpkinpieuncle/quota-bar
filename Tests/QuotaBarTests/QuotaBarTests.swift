@@ -848,9 +848,10 @@ import Testing
 @Test func liveGrokFetchSucceeds() async throws {
     let client = GrokUsageClient()
     let result = try await client.fetchIfNeeded(force: true, language: .chinese)
-    print("LIVE GROK LIMITS: \(result.limits.map { "\($0.label): \(Int($0.clampedRemaining))%" }), plan=\(result.plan)")
+    print("LIVE GROK LIMITS: \(result.limits.map { "\($0.label): \(Int($0.clampedRemaining))%" }), plan=\(result.plan), totalUsed=\(result.totalUsedPercent ?? 0)%, products=\(result.productUsages.map { "\($0.product): \($0.usagePercent)%" })")
     #expect(!result.limits.isEmpty)
     #expect(result.limits[0].clampedRemaining > 0)
+    #expect(result.totalUsedPercent != nil)
 }
 
 
