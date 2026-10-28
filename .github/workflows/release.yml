@@ -81,8 +81,24 @@ jobs:
         run: |
           version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)
           tag="v$version"
-          notes_file="RELEASE_NOTES_$version.md"
-          test -f "$notes_file"
+          notes=$(python3 -c "
+          with open('CHANGELOG.md') as f:
+              lines = f.readlines()
+          target = '# Quota Bar ' + '$version'
+          capturing = False
+          out = []
+          for line in lines:
+              s = line.strip()
+              if s.startswith('# Quota Bar ') or s.startswith('# Changelog'):
+                  if capturing:
+                      break
+                  if s == target or s == '# Quota Bar v$version':
+                      capturing = True
+                      continue
+              elif capturing:
+                  out.append(line)
+          print(''.join(out).strip())
+          ")
           if ! git rev-parse "$tag" >/dev/null 2>&1; then
             git tag "$tag"
             git push origin "$tag"
@@ -92,4 +108,4 @@ jobs:
             "dist/release/$tag/Quota-Bar-$version.zip" \
             "dist/release/$tag/SHA256SUMS.txt" \
             --title "Quota Bar $tag" \
-            --notes-file "$notes_file"
+            --notes "${notes:-Quota Bar $tag}"
