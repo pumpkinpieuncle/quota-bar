@@ -25,6 +25,11 @@ import Testing
     #expect(balance.balances == snapshot.balances)
     let missing = PetSpeechContent(snapshot: .placeholder(.kimi), preference: .weekly, language: .chinese)
     #expect(missing.limits.isEmpty && missing.balances.isEmpty)
+
+    var deepseek = ProviderSnapshot.placeholder(.deepseek)
+    deepseek.activity = .connected
+    let dsSpeech = PetSpeechContent(snapshot: deepseek, preference: .weekly, language: .chinese)
+    #expect(dsSpeech.greeting == "我在呢，白饭我就放心吃了")
 }
 
 @MainActor
@@ -87,6 +92,28 @@ import Testing
         }
         preferences.hiddenProviders = []
         preferences.desktopPets = Set(ProviderID.allCases)
+        try await Task.sleep(for: .milliseconds(250))
+        for window in petWindows() {
+            if let view = window.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+                view.cacheDisplay(in: view.bounds, to: bitmap)
+                try bitmap.representation(using: .png, properties: [:])?.write(to: destination.appendingPathComponent("all-\(window.title).png"))
+            }
+        }
+        preferences.setPetName("小橘 📚", for: .claude)
+        let previewActivity = ProcessInfo.processInfo.environment["QUOTABAR_PET_PREVIEW_ACTIVITY"]
+            .flatMap(ActivityState.init(rawValue:)) ?? .working
+        model.snapshots = ProviderID.allCases.map { provider in
+            var value = ProviderSnapshot.placeholder(provider)
+            value.activity = previewActivity
+            return value
+        }
+        try await Task.sleep(for: .seconds(3))
+        for window in petWindows() {
+            if let view = window.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+                view.cacheDisplay(in: view.bounds, to: bitmap)
+                try bitmap.representation(using: .png, properties: [:])?.write(to: destination.appendingPathComponent("\(previewActivity.rawValue)-\(window.title).png"))
+            }
+        }
         let panel = NSPanel(contentRect: CGRect(x: 60, y: 250, width: 1100, height: 360), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.isReleasedWhenClosed = false
         panel.appearance = NSAppearance(named: .darkAqua)
@@ -151,11 +178,20 @@ import Testing
     #expect(preferences.desktopPets == [.claude])
     preferences.setPetOrigin(CGPoint(x: 120, y: 80), for: .claude)
     preferences.setPetOrigin(CGPoint(x: -900, y: 200), for: .deepseek)
+    preferences.setPetName("  小橘\n📚  ", for: .claude)
+    preferences.setPetName("龙龙", for: .codex)
+    #expect(preferences.petName(for: .claude) == "小橘 📚")
+    #expect(preferences.petName(for: .deepseek) == ProviderID.deepseek.title)
 
     let relaunched = AppPreferences(defaults: defaults)
     #expect(relaunched.desktopPets == [.claude])
     #expect(relaunched.savedPetOrigin(for: .claude) == CGPoint(x: 120, y: 80))
     #expect(relaunched.savedPetOrigin(for: .deepseek) == CGPoint(x: -900, y: 200))
+    #expect(relaunched.petName(for: .claude) == "小橘 📚")
+    #expect(relaunched.petName(for: .codex) == "龙龙")
+    relaunched.setPetName(" \n ", for: .claude)
+    #expect(relaunched.petName(for: .claude) == ProviderID.claude.title)
+    #expect(relaunched.petName(for: .codex) == "龙龙")
 }
 
 @MainActor
@@ -176,6 +212,19 @@ import Testing
     for provider in ProviderID.allCases {
         let artwork = try #require(PetArtwork.load(provider: provider, activity: .idle), "Missing artwork for \(provider)")
         #expect(artwork.image.size.width > 0)
+        for animation in [PetAnimation.idle, .greeting, .working, .thinking, .attention, .stretching] where provider != .deepseek {
+            let continuous = try #require(PetArtwork.load(provider: provider, animation: animation))
+            #expect(continuous.isContinuousVideo)
+            #expect(continuous.frameCount > 24)
+            #expect(continuous.frameDurations.allSatisfy { abs($0 - 1.0 / 24) < 0.0001 })
+        }
+        if provider != .deepseek {
+            let waiting = try #require(PetArtwork.load(provider: provider, animation: .waiting))
+            let greeting = try #require(PetArtwork.load(provider: provider, animation: .greeting))
+            #expect(waiting.isContinuousVideo)
+            #expect(waiting.frames == greeting.frames)
+            #expect(waiting.frameDurations == greeting.frameDurations)
+        }
         for animation in Set([PetAnimation.idle, .working, .waiting, .attention] + PetAnimation.leisure(for: provider)) {
             let action = try #require(PetArtwork.load(provider: provider, animation: animation), "Missing \(provider) / \(animation)")
             #expect(action.frameCount > 1)
@@ -192,5 +241,36 @@ import Testing
         #expect(artwork.frameCount <= artwork.columns * artwork.rows)
         #expect(artwork.image.size.width / Double(artwork.columns) == 192)
         #expect(artwork.image.size.height / Double(artwork.rows) == 180)
+    }
+}
+
+@MainActor
+@Test func desktopPetNeutralSizesAndFootBaselinesMatch() throws {
+    for provider in ProviderID.allCases {
+        let artwork = try #require(PetArtwork.load(provider: provider, animation: .idle))
+        let atlas = try #require(artwork.image.cgImage(forProposedRect: nil, context: nil, hints: nil))
+        let width = atlas.width / artwork.columns
+        let height = atlas.height / artwork.rows
+        let firstFrame = artwork.frames[0]
+        let tile = try #require(atlas.cropping(to: CGRect(
+            x: firstFrame % artwork.columns * width,
+            y: firstFrame / artwork.columns * height,
+            width: width, height: height
+        )))
+        let pixels = NSBitmapImageRep(cgImage: tile)
+        var firstRow = height
+        var lastRow = -1
+        for y in 0..<height {
+            for x in 0..<width where (pixels.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.5 {
+                firstRow = min(firstRow, y)
+                lastRow = max(lastRow, y)
+            }
+        }
+        #expect(lastRow >= firstRow, "Empty neutral frame for \(provider)")
+        let scale = PetArtwork.subjectDisplayHeight / artwork.referenceHeight
+        let visibleHeight = CGFloat(lastRow - firstRow + 1) * scale
+        let baseline = 10 + (CGFloat(height - lastRow - 1) - artwork.bottomInset) * scale
+        #expect(abs(visibleHeight - PetArtwork.subjectDisplayHeight) <= 1, "Size mismatch for \(provider)")
+        #expect(abs(baseline - 10) <= 1, "Foot baseline mismatch for \(provider)")
     }
 }

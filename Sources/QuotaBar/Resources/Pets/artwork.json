@@ -40,7 +40,78 @@
         "dancing",
         "sleeping"
       ],
-      "normalization": "Shared scale across both sheets; bottom-center anchor; alpha-aware gutters."
+      "normalization": "Shared scale across both sheets; bottom-center anchor; alpha-aware gutters.",
+      "continuousSample": {
+        "generatedWith": "Doubao / Seedance 2.0 Mini",
+        "generatedOn": "2026-10-28",
+        "sourceURL": "https://www.doubao.com/chat/38449794021754626",
+        "sourceSHA256": "04fa670c41264ad7deaead4368091b4685129fce5f8dc48603d1491d090fb523",
+        "actions": [
+          "idle",
+          "greeting"
+        ],
+        "fps": 24,
+        "importer": "scripts/build-pet-motion.py",
+        "importConfiguration": "docs/pet-motion-imports.json",
+        "scope": "Initial idle/greeting import; current continuous action provenance is recorded in continuousClips."
+      },
+      "continuousClips": {
+        "idle": {
+          "sourceURL": "https://www.doubao.com/chat/38449794021754626",
+          "sourceSHA256": "04fa670c41264ad7deaead4368091b4685129fce5f8dc48603d1491d090fb523",
+          "fps": 24,
+          "frameCount": 52,
+          "importConfiguration": "docs/pet-motion-imports.json#claude",
+          "sourceClipFrames": [
+            0,
+            58
+          ]
+        },
+        "greeting": {
+          "sourceURL": "https://www.doubao.com/chat/38449794021754626",
+          "sourceSHA256": "04fa670c41264ad7deaead4368091b4685129fce5f8dc48603d1491d090fb523",
+          "fps": 24,
+          "frameCount": 235,
+          "importConfiguration": "docs/pet-motion-imports.json#claude",
+          "sourceClipFrames": [
+            0,
+            241
+          ]
+        },
+        "working": {
+          "sourceURL": "https://www.doubao.com/chat/38449814706224130",
+          "sourceSHA256": "c49d13d1412aed55fdbec985935a00c287dc36a4a8e25bbb4f19e2d99f7ec3f4",
+          "fps": 24,
+          "frameCount": 235,
+          "importConfiguration": "docs/pet-motion-imports.json#claude-working",
+          "sourceClipFrames": [
+            0,
+            241
+          ]
+        },
+        "thinking": {
+          "sourceURL": "https://www.doubao.com/chat/38449884677859842",
+          "sourceSHA256": "a55ab720bd4ec7d91c4634a4d65d12119638d8b4159d1fa993c9b03bd966a82d",
+          "fps": 24,
+          "frameCount": 235,
+          "importConfiguration": "docs/pet-motion-imports.json#claude-thinking",
+          "sourceClipFrames": [
+            0,
+            241
+          ]
+        },
+        "stretching": {
+          "sourceURL": "https://www.doubao.com/chat/38449868340682754",
+          "sourceSHA256": "64bb706c2c77940a3641a9322f2dc73f8a188974471595f987c152ae74d57ba7",
+          "fps": 24,
+          "frameCount": 235,
+          "sourceClipFrames": [
+            0,
+            241
+          ],
+          "importConfiguration": "docs/pet-motion-imports.json#claude-stretching"
+        }
+      }
     },
     "codex": {
       "coreSource": "exec-cd613acf-7023-4b28-8f0c-9069ae6efe71.png",
@@ -58,7 +129,78 @@
         "dancing",
         "sleeping"
       ],
-      "normalization": "Shared scale across both sheets; bottom-center anchor; alpha-aware gutters."
+      "normalization": "Shared scale across both sheets; bottom-center anchor; alpha-aware gutters.",
+      "continuousSample": {
+        "generatedWith": "Doubao / Seedance 2.0 Mini",
+        "generatedOn": "2026-10-28",
+        "sourceURL": "https://www.doubao.com/chat/38450128814406146",
+        "sourceSHA256": "06d820183c260b770d47da4f71ca1912d4fe79a46f0ccb213c158ac77943e01f",
+        "actions": [
+          "idle",
+          "greeting"
+        ],
+        "fps": 24,
+        "importer": "scripts/build-pet-motion.py",
+        "importConfiguration": "docs/pet-motion-imports.json",
+        "scope": "Initial idle/greeting import; current continuous action provenance is recorded in continuousClips."
+      },
+      "continuousClips": {
+        "idle": {
+          "sourceURL": "https://www.doubao.com/chat/38450128814406146",
+          "sourceSHA256": "06d820183c260b770d47da4f71ca1912d4fe79a46f0ccb213c158ac77943e01f",
+          "fps": 24,
+          "frameCount": 40,
+          "importConfiguration": "docs/pet-motion-imports.json#codex",
+          "sourceClipFrames": [
+            0,
+            46
+          ]
+        },
+        "greeting": {
+          "sourceURL": "https://www.doubao.com/chat/38450128814406146",
+          "sourceSHA256": "06d820183c260b770d47da4f71ca1912d4fe79a46f0ccb213c158ac77943e01f",
+          "fps": 24,
+          "frameCount": 235,
+          "importConfiguration": "docs/pet-motion-imports.json#codex",
+          "sourceClipFrames": [
+            0,
+            241
+          ]
+        },
+        "working": {
+          "sourceURL": "https://www.doubao.com/chat/38449867131363586",
+          "sourceSHA256": "6a1cf2442ec5f832d35d76caefec052f895d67b4419efd5a0a811491c0d0ebe3",
+          "fps": 24,
+          "frameCount": 223,
+          "importConfiguration": "docs/pet-motion-imports.json#codex-working",
+          "sourceClipFrames": [
+            12,
+            241
+          ]
+        },
+        "thinking": {
+          "sourceURL": "https://www.doubao.com/chat/38449884787544066",
+          "sourceSHA256": "0bf76d0bbce2d2036d8694214024203ca8e8211ecbb24809a0ec32cc32c7b287",
+          "fps": 24,
+          "frameCount": 235,
+          "importConfiguration": "docs/pet-motion-imports.json#codex-thinking",
+          "sourceClipFrames": [
+            0,
+            241
+          ]
+        },
+        "stretching": {
+          "sourceURL": "https://www.doubao.com/chat/38449868582150146",
+          "sourceSHA256": "a44280eaab7627017e18ab232be85965fd598563c235bba4f39d4112a6931aaf",
+          "fps": 24,
+          "frameCount": 235,
+          "sourceClipFrames": [
+            0,
+            241
+          ],
+          "importConfiguration": "docs/pet-motion-imports.json#codex-stretching"
+        }
+      }
     },
     "kimi": {
       "coreSource": "exec-5cba0c3d-ad07-4bc5-96a5-e330d029a230.png",
@@ -76,7 +218,78 @@
         "dancing",
         "sleeping"
       ],
-      "normalization": "Shared scale across both sheets; bottom-center anchor; alpha-aware gutters."
+      "normalization": "Shared scale across both sheets; bottom-center anchor; alpha-aware gutters.",
+      "continuousSample": {
+        "generatedWith": "Doubao / Seedance 2.0 Mini",
+        "generatedOn": "2026-10-28",
+        "sourceURL": "https://www.doubao.com/chat/38449866416504834",
+        "sourceSHA256": "2d31d1c2a8f9d43df735920c05fccc14c4067986421ec2c5796dcd3f0820fe38",
+        "actions": [
+          "idle",
+          "greeting"
+        ],
+        "fps": 24,
+        "importer": "scripts/build-pet-motion.py",
+        "importConfiguration": "docs/pet-motion-imports.json",
+        "scope": "Initial idle/greeting import; current continuous action provenance is recorded in continuousClips."
+      },
+      "continuousClips": {
+        "idle": {
+          "sourceURL": "https://www.doubao.com/chat/38449866416504834",
+          "sourceSHA256": "2d31d1c2a8f9d43df735920c05fccc14c4067986421ec2c5796dcd3f0820fe38",
+          "fps": 24,
+          "frameCount": 50,
+          "importConfiguration": "docs/pet-motion-imports.json#kimi",
+          "sourceClipFrames": [
+            0,
+            56
+          ]
+        },
+        "greeting": {
+          "sourceURL": "https://www.doubao.com/chat/38449866416504834",
+          "sourceSHA256": "2d31d1c2a8f9d43df735920c05fccc14c4067986421ec2c5796dcd3f0820fe38",
+          "fps": 24,
+          "frameCount": 235,
+          "importConfiguration": "docs/pet-motion-imports.json#kimi",
+          "sourceClipFrames": [
+            0,
+            241
+          ]
+        },
+        "working": {
+          "sourceURL": "https://www.doubao.com/chat/38449867467297026",
+          "sourceSHA256": "ccd5a527b510a02e819adc4a856de838cd2f4c4f3b2f6889eff015c46cf69a94",
+          "fps": 24,
+          "frameCount": 235,
+          "importConfiguration": "docs/pet-motion-imports.json#kimi-working",
+          "sourceClipFrames": [
+            0,
+            241
+          ]
+        },
+        "thinking": {
+          "sourceURL": "https://www.doubao.com/chat/38449867901016834",
+          "sourceSHA256": "8f80a46901ab5af1cffc37b41e4da410ef97b77b0c0e17a07d86b64c78aa008f",
+          "fps": 24,
+          "frameCount": 235,
+          "importConfiguration": "docs/pet-motion-imports.json#kimi-thinking",
+          "sourceClipFrames": [
+            0,
+            241
+          ]
+        },
+        "stretching": {
+          "sourceURL": "https://www.doubao.com/chat/38450037397616898",
+          "sourceSHA256": "2d2af160914054f95edcad3bcc02f59462b278bd694d8b5f2336fd3d76337f28",
+          "fps": 24,
+          "frameCount": 235,
+          "sourceClipFrames": [
+            0,
+            241
+          ],
+          "importConfiguration": "docs/pet-motion-imports.json#kimi-stretching"
+        }
+      }
     },
     "grok": {
       "coreSource": "exec-fd4aba75-509f-401c-8872-3d10680864e7.png",
@@ -94,7 +307,78 @@
         "dancing",
         "sleeping"
       ],
-      "normalization": "Shared scale across both sheets; bottom-center anchor; alpha-aware gutters."
+      "normalization": "Shared scale across both sheets; bottom-center anchor; alpha-aware gutters.",
+      "continuousSample": {
+        "generatedWith": "Doubao / Seedance 2.0 Mini",
+        "generatedOn": "2026-10-28",
+        "sourceURL": "https://www.doubao.com/chat/38450128828380930",
+        "sourceSHA256": "b39ea4b2a50255621275204c961493344d0ffcf9e9996c27154f3f3043c6624c",
+        "actions": [
+          "idle",
+          "greeting"
+        ],
+        "fps": 24,
+        "importer": "scripts/build-pet-motion.py",
+        "importConfiguration": "docs/pet-motion-imports.json",
+        "scope": "Initial idle/greeting import; current continuous action provenance is recorded in continuousClips."
+      },
+      "continuousClips": {
+        "idle": {
+          "sourceURL": "https://www.doubao.com/chat/38450128828380930",
+          "sourceSHA256": "b39ea4b2a50255621275204c961493344d0ffcf9e9996c27154f3f3043c6624c",
+          "fps": 24,
+          "frameCount": 45,
+          "importConfiguration": "docs/pet-motion-imports.json#grok",
+          "sourceClipFrames": [
+            0,
+            51
+          ]
+        },
+        "greeting": {
+          "sourceURL": "https://www.doubao.com/chat/38450128828380930",
+          "sourceSHA256": "b39ea4b2a50255621275204c961493344d0ffcf9e9996c27154f3f3043c6624c",
+          "fps": 24,
+          "frameCount": 235,
+          "importConfiguration": "docs/pet-motion-imports.json#grok",
+          "sourceClipFrames": [
+            0,
+            241
+          ]
+        },
+        "working": {
+          "sourceURL": "https://www.doubao.com/chat/38449867278156802",
+          "sourceSHA256": "66443291ebcabc754b21ec912b4390153c709cf454866d352cc4475e66e3ae6d",
+          "fps": 24,
+          "frameCount": 235,
+          "importConfiguration": "docs/pet-motion-imports.json#grok-working",
+          "sourceClipFrames": [
+            0,
+            241
+          ]
+        },
+        "thinking": {
+          "sourceURL": "https://www.doubao.com/chat/38450130704111618",
+          "sourceSHA256": "a8c69e6500ba9760ca3eb14a324294c52149d28f0d52f894f69857c47294bece",
+          "fps": 24,
+          "frameCount": 235,
+          "importConfiguration": "docs/pet-motion-imports.json#grok-thinking",
+          "sourceClipFrames": [
+            0,
+            241
+          ]
+        },
+        "stretching": {
+          "sourceURL": "https://www.doubao.com/chat/38450131452918274",
+          "sourceSHA256": "4b2ace3735db7864bc53abe3b17f8fdd0697f446878b5f3e15cb77a1074abcc0",
+          "fps": 24,
+          "frameCount": 235,
+          "sourceClipFrames": [
+            0,
+            241
+          ],
+          "importConfiguration": "docs/pet-motion-imports.json#grok-stretching"
+        }
+      }
     },
     "gemini": {
       "coreSource": "exec-25c918e3-61a8-4286-ab02-005f948be8ad.png",
@@ -112,7 +396,78 @@
         "dancing",
         "sleeping"
       ],
-      "normalization": "Shared scale across both sheets; bottom-center anchor; alpha-aware gutters."
+      "normalization": "Shared scale across both sheets; bottom-center anchor; alpha-aware gutters.",
+      "continuousSample": {
+        "generatedWith": "Doubao / Seedance 2.0 Mini",
+        "generatedOn": "2026-10-28",
+        "sourceURL": "https://www.doubao.com/chat/38449883263379202",
+        "sourceSHA256": "449e9b6ed08b56c33bf1a14f58d1fce51ea4be057fa5e3b8fb0a106e7434c239",
+        "actions": [
+          "idle",
+          "greeting"
+        ],
+        "fps": 24,
+        "importer": "scripts/build-pet-motion.py",
+        "importConfiguration": "docs/pet-motion-imports.json",
+        "scope": "Initial idle/greeting import; current continuous action provenance is recorded in continuousClips."
+      },
+      "continuousClips": {
+        "idle": {
+          "sourceURL": "https://www.doubao.com/chat/38449883263379202",
+          "sourceSHA256": "449e9b6ed08b56c33bf1a14f58d1fce51ea4be057fa5e3b8fb0a106e7434c239",
+          "fps": 24,
+          "frameCount": 34,
+          "importConfiguration": "docs/pet-motion-imports.json#gemini",
+          "sourceClipFrames": [
+            0,
+            40
+          ]
+        },
+        "greeting": {
+          "sourceURL": "https://www.doubao.com/chat/38449883263379202",
+          "sourceSHA256": "449e9b6ed08b56c33bf1a14f58d1fce51ea4be057fa5e3b8fb0a106e7434c239",
+          "fps": 24,
+          "frameCount": 235,
+          "importConfiguration": "docs/pet-motion-imports.json#gemini",
+          "sourceClipFrames": [
+            0,
+            241
+          ]
+        },
+        "working": {
+          "sourceURL": "https://www.doubao.com/chat/38450130225574914",
+          "sourceSHA256": "8fe49bbfb88edcf9a43566775c033309c926f10456dc423e4d94feabdaaf9701",
+          "fps": 24,
+          "frameCount": 235,
+          "importConfiguration": "docs/pet-motion-imports.json#gemini-working",
+          "sourceClipFrames": [
+            0,
+            241
+          ]
+        },
+        "thinking": {
+          "sourceURL": "https://www.doubao.com/chat/38450005496172546",
+          "sourceSHA256": "d73313d583a96d5225159577c1d2a654dbf065bab4266d4599bfa26fe36e1286",
+          "fps": 24,
+          "frameCount": 235,
+          "importConfiguration": "docs/pet-motion-imports.json#gemini-thinking",
+          "sourceClipFrames": [
+            0,
+            241
+          ]
+        },
+        "stretching": {
+          "sourceURL": "https://www.doubao.com/chat/38449885507573762",
+          "sourceSHA256": "4e2fd240d857ddaa9e206386fce817446c99feb4042a81d4a9548bcc97786a28",
+          "fps": 24,
+          "frameCount": 235,
+          "sourceClipFrames": [
+            0,
+            241
+          ],
+          "importConfiguration": "docs/pet-motion-imports.json#gemini-stretching"
+        }
+      }
     }
   }
 }

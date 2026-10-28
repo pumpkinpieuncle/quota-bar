@@ -64,6 +64,10 @@ final class AppPreferences: ObservableObject {
         }
     }
 
+    @Published private(set) var desktopPetNames: [String: String] {
+        didSet { defaults.set(desktopPetNames, forKey: Keys.desktopPetNames) }
+    }
+
     /// Percentage at or below which a provider is treated as running low. Zero
     /// turns the warning off.
     @Published var lowQuotaThreshold: Int {
@@ -97,6 +101,7 @@ final class AppPreferences: ObservableObject {
         static let hiddenProviders = "hiddenProviders"
         static let pausedProviders = "pausedProviders"
         static let desktopPets = "desktopPets"
+        static let desktopPetNames = "desktopPetNames"
         static let knownProviders = "knownProviders"
         static let lowQuotaThreshold = "lowQuotaThreshold"
         static let hudEnabled = "hudEnabled"
@@ -200,6 +205,7 @@ final class AppPreferences: ObservableObject {
             (defaults.stringArray(forKey: Keys.desktopPets) ?? [])
                 .compactMap(ProviderID.init(rawValue:))
         )
+        desktopPetNames = defaults.dictionary(forKey: Keys.desktopPetNames) as? [String: String] ?? [:]
 
         lowQuotaThreshold = defaults.object(forKey: Keys.lowQuotaThreshold) == nil
             ? 10
@@ -220,6 +226,19 @@ final class AppPreferences: ObservableObject {
             desktopPets.remove(provider)
         } else {
             desktopPets.insert(provider)
+        }
+    }
+
+    func petName(for provider: ProviderID) -> String {
+        desktopPetNames[provider.rawValue] ?? provider.title
+    }
+
+    func setPetName(_ name: String, for provider: ProviderID) {
+        let normalized = String(name.split(whereSeparator: \.isWhitespace).joined(separator: " ").prefix(32))
+        if normalized.isEmpty || normalized == provider.title {
+            desktopPetNames.removeValue(forKey: provider.rawValue)
+        } else {
+            desktopPetNames[provider.rawValue] = normalized
         }
     }
 

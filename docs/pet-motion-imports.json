@@ -1,0 +1,891 @@
+{
+  "claude": {
+    "rawVideo": "dist/pet-motion/claude-wave-source.mp4",
+    "sourceSHA256": "04fa670c41264ad7deaead4368091b4685129fce5f8dc48603d1491d090fb523",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38449794021754626",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      416,
+      112,
+      448,
+      504
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "despill": "green",
+    "clips": {
+      "idle": [
+        0,
+        58
+      ],
+      "greeting": [
+        0,
+        241
+      ]
+    }
+  },
+  "codex": {
+    "rawVideo": "dist/pet-motion/codex-wave-source.mp4",
+    "sourceSHA256": "06d820183c260b770d47da4f71ca1912d4fe79a46f0ccb213c158ac77943e01f",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38450128814406146",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      384,
+      24,
+      576,
+      680
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "despill": "green",
+    "clips": {
+      "idle": [
+        0,
+        46
+      ],
+      "greeting": [
+        0,
+        241
+      ]
+    }
+  },
+  "grok": {
+    "rawVideo": "dist/pet-motion/grok-wave-source.mp4",
+    "sourceSHA256": "b39ea4b2a50255621275204c961493344d0ffcf9e9996c27154f3f3043c6624c",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38450128828380930",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      288,
+      0,
+      704,
+      704
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "despill": "green",
+    "clips": {
+      "idle": [
+        0,
+        51
+      ],
+      "greeting": [
+        0,
+        241
+      ]
+    }
+  },
+  "gemini": {
+    "rawVideo": "dist/pet-motion/gemini-wave-source.mp4",
+    "sourceSHA256": "449e9b6ed08b56c33bf1a14f58d1fce51ea4be057fa5e3b8fb0a106e7434c239",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38449883263379202",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      352,
+      32,
+      656,
+      648
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "despill": "green",
+    "clips": {
+      "idle": [
+        0,
+        40
+      ],
+      "greeting": [
+        0,
+        241
+      ]
+    }
+  },
+  "kimi": {
+    "rawVideo": "dist/pet-motion/kimi-wave-source.mp4",
+    "sourceSHA256": "2d31d1c2a8f9d43df735920c05fccc14c4067986421ec2c5796dcd3f0820fe38",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38449866416504834",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      336,
+      48,
+      608,
+      632
+    ],
+    "cellHeight": 252,
+    "keyColor": "0xFF00FF",
+    "despill": null,
+    "clips": {
+      "idle": [
+        0,
+        56
+      ],
+      "greeting": [
+        0,
+        241
+      ]
+    }
+  },
+  "claude-working": {
+    "provider": "claude",
+    "rawVideo": "dist/pet-motion/claude-working-source.mp4",
+    "sourceSHA256": "c49d13d1412aed55fdbec985935a00c287dc36a4a8e25bbb4f19e2d99f7ec3f4",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38449814706224130",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      416,
+      112,
+      448,
+      504
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "despill": "green",
+    "calibrationFrame": 6,
+    "clips": {
+      "working": [
+        0,
+        241
+      ]
+    }
+  },
+  "codex-working": {
+    "provider": "codex",
+    "rawVideo": "dist/pet-motion/codex-working-source.mp4",
+    "sourceSHA256": "6a1cf2442ec5f832d35d76caefec052f895d67b4419efd5a0a811491c0d0ebe3",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38449867131363586",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      384,
+      24,
+      576,
+      680
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "despill": "green",
+    "calibrationFrame": 6,
+    "clips": {
+      "working": [
+        12,
+        241
+      ]
+    },
+    "reviewNote": "Start after the book appears at the lowered hand, matching the closing pose for a cleaner continuous work loop."
+  },
+  "grok-working": {
+    "provider": "grok",
+    "rawVideo": "dist/pet-motion/grok-working-source.mp4",
+    "sourceSHA256": "66443291ebcabc754b21ec912b4390153c709cf454866d352cc4475e66e3ae6d",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38449867278156802",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      288,
+      0,
+      704,
+      704
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "despill": "green",
+    "calibrationFrame": 6,
+    "clips": {
+      "working": [
+        0,
+        241
+      ]
+    }
+  },
+  "gemini-working": {
+    "provider": "gemini",
+    "rawVideo": "dist/pet-motion/gemini-working-source.mp4",
+    "sourceSHA256": "8fe49bbfb88edcf9a43566775c033309c926f10456dc423e4d94feabdaaf9701",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38450130225574914",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      352,
+      32,
+      656,
+      648
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "despill": "green",
+    "calibrationFrame": 6,
+    "clips": {
+      "working": [
+        0,
+        241
+      ]
+    }
+  },
+  "kimi-working": {
+    "provider": "kimi",
+    "rawVideo": "dist/pet-motion/kimi-working-source.mp4",
+    "sourceSHA256": "ccd5a527b510a02e819adc4a856de838cd2f4c4f3b2f6889eff015c46cf69a94",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38449867467297026",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      336,
+      48,
+      608,
+      632
+    ],
+    "cellHeight": 252,
+    "keyColor": "0xFF00FF",
+    "despill": null,
+    "calibrationFrame": 6,
+    "clips": {
+      "working": [
+        0,
+        241
+      ]
+    }
+  },
+  "claude-thinking": {
+    "provider": "claude",
+    "rawVideo": "dist/pet-motion/claude-thinking-source.mp4",
+    "sourceSHA256": "a55ab720bd4ec7d91c4634a4d65d12119638d8b4159d1fa993c9b03bd966a82d",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38449884677859842",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      416,
+      112,
+      448,
+      504
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "despill": "green",
+    "calibrationFrame": 6,
+    "clips": {
+      "thinking": [
+        0,
+        241
+      ]
+    }
+  },
+  "codex-thinking": {
+    "provider": "codex",
+    "rawVideo": "dist/pet-motion/codex-thinking-source.mp4",
+    "sourceSHA256": "0bf76d0bbce2d2036d8694214024203ca8e8211ecbb24809a0ec32cc32c7b287",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38449884787544066",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      384,
+      24,
+      576,
+      680
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "despill": "green",
+    "calibrationFrame": 6,
+    "clips": {
+      "thinking": [
+        0,
+        241
+      ]
+    }
+  },
+  "kimi-thinking": {
+    "provider": "kimi",
+    "rawVideo": "dist/pet-motion/kimi-thinking-source.mp4",
+    "sourceSHA256": "8f80a46901ab5af1cffc37b41e4da410ef97b77b0c0e17a07d86b64c78aa008f",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38449867901016834",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      336,
+      48,
+      608,
+      632
+    ],
+    "cellHeight": 252,
+    "keyColor": "0xFF00FF",
+    "despill": null,
+    "calibrationFrame": 6,
+    "clips": {
+      "thinking": [
+        0,
+        241
+      ]
+    }
+  },
+  "grok-thinking": {
+    "provider": "grok",
+    "rawVideo": "dist/pet-motion/grok-thinking-source.mp4",
+    "sourceSHA256": "a8c69e6500ba9760ca3eb14a324294c52149d28f0d52f894f69857c47294bece",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38450130704111618",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      288,
+      0,
+      704,
+      704
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "despill": "green",
+    "calibrationFrame": 6,
+    "clips": {
+      "thinking": [
+        0,
+        241
+      ]
+    }
+  },
+  "gemini-thinking": {
+    "provider": "gemini",
+    "rawVideo": "dist/pet-motion/gemini-thinking-source.mp4",
+    "sourceSHA256": "d73313d583a96d5225159577c1d2a654dbf065bab4266d4599bfa26fe36e1286",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38450005496172546",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      352,
+      32,
+      656,
+      648
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "despill": "green",
+    "calibrationFrame": 6,
+    "clips": {
+      "thinking": [
+        0,
+        241
+      ]
+    }
+  },
+  "claude-stretching": {
+    "provider": "claude",
+    "rawVideo": "dist/pet-motion/claude-stretching-source.mp4",
+    "sourceSHA256": "64bb706c2c77940a3641a9322f2dc73f8a188974471595f987c152ae74d57ba7",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38449868340682754",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      416,
+      112,
+      448,
+      504
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "despill": "green",
+    "calibrationFrame": 6,
+    "clips": {
+      "stretching": [
+        0,
+        241
+      ]
+    }
+  },
+  "codex-stretching": {
+    "provider": "codex",
+    "rawVideo": "dist/pet-motion/codex-stretching-source.mp4",
+    "sourceSHA256": "a44280eaab7627017e18ab232be85965fd598563c235bba4f39d4112a6931aaf",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38449868582150146",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      320,
+      24,
+      704,
+      680
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "despill": "green",
+    "calibrationFrame": 6,
+    "clips": {
+      "stretching": [
+        0,
+        241
+      ]
+    },
+    "reviewNote": "Expanded crop symmetrically to retain the tail at maximum extension; neutral body scale and center remain fixed."
+  },
+  "gemini-stretching": {
+    "provider": "gemini",
+    "rawVideo": "dist/pet-motion/gemini-stretching-source.mp4",
+    "sourceSHA256": "4e2fd240d857ddaa9e206386fce817446c99feb4042a81d4a9548bcc97786a28",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38449885507573762",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      312,
+      32,
+      736,
+      648
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "despill": "green",
+    "calibrationFrame": 6,
+    "clips": {
+      "stretching": [
+        0,
+        241
+      ]
+    },
+    "reviewNote": "Symmetric wider crop retains the tail throughout stretching without changing neutral body scale or center."
+  },
+  "kimi-stretching": {
+    "provider": "kimi",
+    "rawVideo": "dist/pet-motion/kimi-stretching-source.mp4",
+    "sourceSHA256": "2d2af160914054f95edcad3bcc02f59462b278bd694d8b5f2336fd3d76337f28",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38450037397616898",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      336,
+      48,
+      608,
+      632
+    ],
+    "cellHeight": 252,
+    "keyColor": "0xFF00FF",
+    "despill": null,
+    "calibrationFrame": 6,
+    "clips": {
+      "stretching": [
+        0,
+        241
+      ]
+    }
+  },
+  "grok-stretching": {
+    "provider": "grok",
+    "rawVideo": "dist/pet-motion/grok-stretching-source.mp4",
+    "sourceSHA256": "4b2ace3735db7864bc53abe3b17f8fdd0697f446878b5f3e15cb77a1074abcc0",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38450131452918274",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      264,
+      0,
+      752,
+      704
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "despill": "green",
+    "calibrationFrame": 6,
+    "clips": {
+      "stretching": [
+        0,
+        241
+      ]
+    },
+    "reviewNote": "Extra symmetric side padding retains the outer pigtails during the full stretch without changing neutral body scale or center."
+  },
+  "claude-snack": {
+    "provider": "claude",
+    "rawVideo": "dist/pet-motion/claude-snack-source.mp4",
+    "sourceSHA256": "f97d1b089d49cf0c38d9da4d18cf1c29fe3bd48268b4ea77862d299ed2ac2b96",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38449870169763330",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      416,
+      112,
+      448,
+      504
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "calibrationFrame": 6,
+    "clips": {
+      "snack": [
+        0,
+        241
+      ]
+    },
+    "despill": "green"
+  },
+  "codex-snack": {
+    "provider": "codex",
+    "rawVideo": "dist/pet-motion/codex-snack-source.mp4",
+    "sourceSHA256": "5cd08112e18b2c59910b4f42a7a93f241bd92fce091c79fe888071918cda7f76",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38450007717205762",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      320,
+      24,
+      704,
+      680
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "calibrationFrame": 6,
+    "clips": {
+      "snack": [
+        0,
+        241
+      ]
+    },
+    "despill": "green"
+  },
+  "grok-snack": {
+    "provider": "grok",
+    "rawVideo": "dist/pet-motion/grok-snack-source.mp4",
+    "sourceSHA256": "d06ee609168811267d7242356b60029e7b3697d6ddaf6094c7823c951d10c646",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38450007720349698",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      264,
+      0,
+      752,
+      704
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "calibrationFrame": 6,
+    "clips": {
+      "snack": [
+        0,
+        241
+      ]
+    },
+    "despill": "green"
+  },
+  "gemini-snack": {
+    "provider": "gemini",
+    "rawVideo": "dist/pet-motion/gemini-snack-source.mp4",
+    "sourceSHA256": "990f84eabbb3839c61391be0b7c3e6e23f2050c4a63be3f298322904a9e22257",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38449887157479938",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      312,
+      32,
+      736,
+      648
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "calibrationFrame": 6,
+    "clips": {
+      "snack": [
+        0,
+        241
+      ]
+    },
+    "despill": "green"
+  },
+  "kimi-snack": {
+    "provider": "kimi",
+    "rawVideo": "dist/pet-motion/kimi-snack-source.mp4",
+    "sourceSHA256": "bb4374e877581f9d6942918375de9760351a72df9c00fae69deb0efb0c104416",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38450007888304898",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      336,
+      48,
+      608,
+      632
+    ],
+    "cellHeight": 252,
+    "keyColor": "0xFF00FF",
+    "calibrationFrame": 6,
+    "clips": {
+      "snack": [
+        0,
+        241
+      ]
+    },
+    "despill": null
+  },
+  "claude-dancing": {
+    "provider": "claude",
+    "rawVideo": "dist/pet-motion/claude-dancing-source.mp4",
+    "sourceSHA256": "3188a8027f052f0c357b84bf370cf2c402a0e134c6eb4ec98fc06b98304e3dd7",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38450091733877506",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      416,
+      112,
+      448,
+      504
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "calibrationFrame": 6,
+    "clips": {
+      "dancing": [
+        0,
+        241
+      ]
+    },
+    "despill": "green"
+  },
+  "codex-dancing": {
+    "provider": "codex",
+    "rawVideo": "dist/pet-motion/codex-dancing-source.mp4",
+    "sourceSHA256": "5f7f3ea4fc0147033933a3cf24e0a3a04c7edc896d003440697a7a39e4ce4590",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38450008339209730",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      320,
+      24,
+      704,
+      680
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "calibrationFrame": 6,
+    "clips": {
+      "dancing": [
+        0,
+        241
+      ]
+    },
+    "despill": "green"
+  },
+  "grok-dancing": {
+    "provider": "grok",
+    "rawVideo": "dist/pet-motion/grok-dancing-source.mp4",
+    "sourceSHA256": "7eb0fe490aa4430d15d14539f1f59e99f2edb867ace8a8c72d8bf11ae150e8e9",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38450008294146306",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      264,
+      0,
+      752,
+      704
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "calibrationFrame": 6,
+    "clips": {
+      "dancing": [
+        0,
+        241
+      ]
+    },
+    "despill": "green"
+  },
+  "gemini-dancing": {
+    "provider": "gemini",
+    "rawVideo": "dist/pet-motion/gemini-dancing-source.mp4",
+    "sourceSHA256": "da1a833c17bd7a6872803b0817ed0f5335b9ca78e9f2daf739b4320268771eb5",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38450092045059330",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      312,
+      32,
+      736,
+      648
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "calibrationFrame": 6,
+    "clips": {
+      "dancing": [
+        0,
+        241
+      ]
+    },
+    "despill": "green"
+  },
+  "kimi-dancing": {
+    "provider": "kimi",
+    "rawVideo": "dist/pet-motion/kimi-dancing-source.mp4",
+    "sourceSHA256": "dc6c5478e27fb6854a5cadb36a7b872b3a36446797fe3e58717c49e9901c07e1",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+    "sourceURL": "https://www.doubao.com/chat/38450133766331650",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      336,
+      48,
+      608,
+      632
+    ],
+    "cellHeight": 252,
+    "keyColor": "0xFF00FF",
+    "calibrationFrame": 6,
+    "clips": {
+      "dancing": [
+        0,
+        241
+      ]
+    },
+    "despill": null
+  },
+  "claude-sleeping": {
+    "provider": "claude",
+    "rawVideo": "dist/pet-motion/claude-sleeping-source.mp4",
+    "sourceSHA256": "605d4c8f950b3ab5cec0879ea14c75e4a35836118b3a513834477adf094a0901",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-29",
+    "sourceURL": "https://www.doubao.com/chat/38449888389882370",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      416,
+      112,
+      448,
+      504
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "calibrationFrame": 6,
+    "clips": {
+      "sleeping": [
+        0,
+        241
+      ]
+    },
+    "despill": "green"
+  },
+  "codex-sleeping": {
+    "provider": "codex",
+    "rawVideo": "dist/pet-motion/codex-sleeping-source.mp4",
+    "sourceSHA256": "ea6e97df9c397e583c6e3ae993c56f261a4fb1eacb9c4042fba337e0dbdf2ef3",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-29",
+    "sourceURL": "https://www.doubao.com/chat/38450008863036674",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      320,
+      24,
+      704,
+      680
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "calibrationFrame": 6,
+    "clips": {
+      "sleeping": [
+        0,
+        241
+      ]
+    },
+    "despill": "green"
+  },
+  "gemini-sleeping": {
+    "provider": "gemini",
+    "rawVideo": "dist/pet-motion/gemini-sleeping-source.mp4",
+    "sourceSHA256": "572ab0259a52d37752288a35143bee57f5757e15515ce4bd8f64ea4352a4d539",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-29",
+    "sourceURL": "https://www.doubao.com/chat/38450092674706690",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      312,
+      32,
+      736,
+      648
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "calibrationFrame": 6,
+    "clips": {
+      "sleeping": [
+        0,
+        241
+      ]
+    },
+    "despill": "green"
+  },
+  "kimi-sleeping": {
+    "provider": "kimi",
+    "rawVideo": "dist/pet-motion/kimi-sleeping-source.mp4",
+    "sourceSHA256": "28c90d5a25444eebe7d40f6bbca7a71d155833e948390716ba375f587f880659",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-29",
+    "sourceURL": "https://www.doubao.com/chat/38449888364517122",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      336,
+      48,
+      608,
+      632
+    ],
+    "cellHeight": 252,
+    "keyColor": "0xFF00FF",
+    "calibrationFrame": 6,
+    "clips": {
+      "sleeping": [
+        0,
+        241
+      ]
+    },
+    "despill": null
+  },
+  "grok-sleeping": {
+    "provider": "grok",
+    "rawVideo": "dist/pet-motion/grok-sleeping-source.mp4",
+    "sourceSHA256": "e4360725e6419110d255b2d6f0c9a5d980c603186a1946d8f5cc3a0828cb5fed",
+    "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-29",
+    "sourceURL": "https://www.doubao.com/chat/38449888400265474",
+    "fps": 24,
+    "seamBlendFrames": 6,
+    "crop": [
+      264,
+      0,
+      752,
+      704
+    ],
+    "cellHeight": 252,
+    "keyColor": "0x00FF00",
+    "calibrationFrame": 6,
+    "clips": {
+      "sleeping": [
+        0,
+        241
+      ]
+    },
+    "despill": "green"
+  }
+}

@@ -4,5 +4,8 @@
   "frameCount": 100,
   "fps": 10,
   "source": "PC2005-cloud/dsh-pet 0.3.8/assets/webm/待机呼吸休闲.webm",
-  "sourceSHA256": "deb965d05a85dacf5ff4a20faa757846f0d11679598c3ec578a5571487660395"
+  "sourceSHA256": "deb965d05a85dacf5ff4a20faa757846f0d11679598c3ec578a5571487660395",
+  "referenceHeight": 133,
+  "bottomInset": 15,
+  "horizontalOffset": 0
 }

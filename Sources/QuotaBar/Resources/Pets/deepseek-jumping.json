@@ -4,5 +4,8 @@
   "frameCount": 100,
   "fps": 10,
   "source": "PC2005-cloud/dsh-pet 0.3.8/assets/webm/点击回应-开心跃动.webm",
-  "sourceSHA256": "86dcb0c3dd7b651de9c107e927d57a5c4224599101706dbdcc782fa48bcd0ad7"
+  "sourceSHA256": "86dcb0c3dd7b651de9c107e927d57a5c4224599101706dbdcc782fa48bcd0ad7",
+  "referenceHeight": 133,
+  "bottomInset": 15,
+  "horizontalOffset": 0
 }

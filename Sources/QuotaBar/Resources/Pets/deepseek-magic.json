@@ -4,5 +4,8 @@
   "frameCount": 100,
   "fps": 10,
   "source": "PC2005-cloud/dsh-pet 0.3.8/assets/webm/凭空生花.webm",
-  "sourceSHA256": "d1c336bc54c57a282bec180859c7b7b58912b70b5bca7b2f49495cd30cc7d5d6"
+  "sourceSHA256": "d1c336bc54c57a282bec180859c7b7b58912b70b5bca7b2f49495cd30cc7d5d6",
+  "referenceHeight": 133,
+  "bottomInset": 15,
+  "horizontalOffset": -8
 }

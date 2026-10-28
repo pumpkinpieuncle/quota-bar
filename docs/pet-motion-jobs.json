@@ -1,0 +1,172 @@
+{
+  "version": 1,
+  "updatedAt": "2026-10-28T10:05:49.275029+00:00",
+  "budget": "free_only",
+  "publish": false,
+  "skill": "skills/doubao-video/SKILL.md",
+  "requirements": [
+    "Continuous idle/greeting for all non-DeepSeek pets.",
+    "Unify visible character sizes and foot baselines; do not equate raw canvas sizes.",
+    "Keep progress when quota is exhausted.",
+    "Do not publish releases."
+  ],
+  "jobs": [
+    {
+      "id": "claude-idle-greeting",
+      "provider": "claude",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/claude-neutral-green.png"
+      ],
+      "promptFile": null,
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38449794021754626",
+      "submittedAt": "2026-10-28T15:56:00+08:00",
+      "expectedWaitMinutes": 10,
+      "rawVideo": "dist/pet-motion/claude-wave-source.mp4",
+      "inspectionReport": "dist/pet-motion/claude-inspection.json",
+      "visualReview": "Reviewed extracted motion frames and transparent contact sheets; idle/greeting imported at 24 fps. Native window sizes checked.",
+      "nextAction": "Original idle/greeting batch complete. See pet-extra-motion-jobs.json for working and subsequent action progress.",
+      "importConfiguration": "docs/pet-motion-imports.json#claude",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/claude-idle.png",
+        "Sources/QuotaBar/Resources/Pets/claude-idle.json",
+        "Sources/QuotaBar/Resources/Pets/claude-greeting.png",
+        "Sources/QuotaBar/Resources/Pets/claude-greeting.json"
+      ]
+    },
+    {
+      "id": "codex-idle-greeting",
+      "provider": "codex",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/codex-neutral-green.png"
+      ],
+      "referenceSHA256": "095d4687c1e8f2245cb0b795621105a9e89d3d2ea9c7c40c52535b82c736bc6c",
+      "promptFile": "docs/pet-motion-prompts/codex.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38450128814406146",
+      "submittedAt": "2026-10-28T17:25:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/codex-wave-source.mp4",
+      "inspectionReport": "dist/pet-motion/codex-inspection.json",
+      "visualReview": "Reviewed extracted motion frames and transparent contact sheets; idle/greeting imported at 24 fps. Native window sizes checked.",
+      "nextAction": "Original idle/greeting batch complete. See pet-extra-motion-jobs.json for working and subsequent action progress.",
+      "submissionEvidence": "Doubao confirmed Seedance 2.0 Mini, expected five minutes, using daily free quota; then stated generation started.",
+      "importConfiguration": "docs/pet-motion-imports.json#codex",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/codex-idle.png",
+        "Sources/QuotaBar/Resources/Pets/codex-idle.json",
+        "Sources/QuotaBar/Resources/Pets/codex-greeting.png",
+        "Sources/QuotaBar/Resources/Pets/codex-greeting.json"
+      ]
+    },
+    {
+      "id": "kimi-idle-greeting",
+      "provider": "kimi",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/kimi-neutral-magenta.png"
+      ],
+      "referenceSHA256": "2be1f2690d2eb7cf62c49d2b4db8cdbe60ecfe39be96ac2a7669438abdce5f28",
+      "promptFile": "docs/pet-motion-prompts/kimi.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38449866416504834",
+      "submittedAt": "2026-10-28T17:52:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/kimi-wave-source.mp4",
+      "inspectionReport": "dist/pet-motion/kimi-inspection.json",
+      "visualReview": "Reviewed extracted motion frames and transparent contact sheets; idle/greeting imported at 24 fps. Native window sizes checked. Kimi green accessory preserved with magenta keying.",
+      "nextAction": "Original idle/greeting batch complete. See pet-extra-motion-jobs.json for working and subsequent action progress.",
+      "backgroundKey": "0xFF00FF",
+      "submissionEvidence": "Confirmed Seedance 2.0 Mini, five-minute wait, daily free quota after parameter confirmation. Magenta background reference uploaded.",
+      "importConfiguration": "docs/pet-motion-imports.json#kimi",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/kimi-idle.png",
+        "Sources/QuotaBar/Resources/Pets/kimi-idle.json",
+        "Sources/QuotaBar/Resources/Pets/kimi-greeting.png",
+        "Sources/QuotaBar/Resources/Pets/kimi-greeting.json"
+      ]
+    },
+    {
+      "id": "grok-idle-greeting",
+      "provider": "grok",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/grok-neutral-green.png"
+      ],
+      "referenceSHA256": "6e3fd437bbc0b3d324a94b63d23fa2d20ca704effea8fddba757770681dfa30a",
+      "promptFile": "docs/pet-motion-prompts/grok.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38450128828380930",
+      "submittedAt": "2026-10-28T17:35:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/grok-wave-source.mp4",
+      "inspectionReport": "dist/pet-motion/grok-inspection.json",
+      "visualReview": "Reviewed extracted motion frames and transparent contact sheets; idle/greeting imported at 24 fps. Native window sizes checked.",
+      "nextAction": "Original idle/greeting batch complete. See pet-extra-motion-jobs.json for working and subsequent action progress.",
+      "submissionEvidence": "Doubao confirmed Seedance 2.0 Mini, five-minute wait, daily free quota after parameter confirmation.",
+      "importConfiguration": "docs/pet-motion-imports.json#grok",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/grok-idle.png",
+        "Sources/QuotaBar/Resources/Pets/grok-idle.json",
+        "Sources/QuotaBar/Resources/Pets/grok-greeting.png",
+        "Sources/QuotaBar/Resources/Pets/grok-greeting.json"
+      ]
+    },
+    {
+      "id": "gemini-idle-greeting",
+      "provider": "gemini",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/gemini-neutral-green.png"
+      ],
+      "referenceSHA256": "606560303ce2ffdbc6153f9953f076bdf7a0f9531b3c021e11b17ed27b870003",
+      "promptFile": "docs/pet-motion-prompts/gemini.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38449883263379202",
+      "submittedAt": "2026-10-28T17:49:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/gemini-wave-source.mp4",
+      "inspectionReport": "dist/pet-motion/gemini-inspection.json",
+      "visualReview": "Reviewed extracted motion frames and transparent contact sheets; idle/greeting imported at 24 fps. Native window sizes checked.",
+      "nextAction": "Original idle/greeting batch complete. See pet-extra-motion-jobs.json for working and subsequent action progress.",
+      "lastApprovalReview": "Approved after supplying existing user authorization evidence for this specific reference upload.",
+      "submissionEvidence": "Confirmed Seedance 2.0 Mini, five-minute wait, daily free quota. UI also says 额度紧张，晚点我要休息一下了 but does not report generation failure.",
+      "importConfiguration": "docs/pet-motion-imports.json#gemini",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/gemini-idle.png",
+        "Sources/QuotaBar/Resources/Pets/gemini-idle.json",
+        "Sources/QuotaBar/Resources/Pets/gemini-greeting.png",
+        "Sources/QuotaBar/Resources/Pets/gemini-greeting.json"
+      ]
+    }
+  ],
+  "followups": [
+    "Migrate remaining legacy activity/manual actions as free quota permits; no claim that all actions are continuous."
+  ],
+  "browser": {
+    "session": "quotabar-motion",
+    "workingDirectory": "/tmp/quotabar-motion-browser",
+    "cli": "@playwright/cli",
+    "connection": "attach --cdp=http://127.0.0.1:9333",
+    "chromeProfile": "~/ChromeProfile",
+    "note": "Requires approved access to existing browser daemon; do not probe from sandbox because CLI unlinks socket on connection error."
+  },
+  "batchGenerationResult": "All four remaining providers Codex/Grok/Gemini/Kimi downloaded and technically verified using free quota; visual review and app integration handled by main agent. No quota exhaustion was reported.",
+  "verification": {
+    "desktopPetTests": "5 passed",
+    "packagedResources": "All six providers verified in built and installed apps",
+    "visibleNeutralHeightPoints": 150,
+    "footBaselinePoints": 10,
+    "allFrameValidation": "dist/pet-motion/atlas-validation.json",
+    "nativeWindowPreview": "dist/pet-preview-final/all-pets.png",
+    "installedApplication": "/Applications/Quota Bar.app",
+    "published": false
+  }
+}

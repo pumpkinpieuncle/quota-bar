@@ -8,7 +8,26 @@ struct PetSpeechContent {
     let extraLimitCount: Int
 
     init(snapshot: ProviderSnapshot, preference: QuotaWindowPreference, language: AppLanguage) {
-        greeting = switch snapshot.activity {
+        greeting = Self.greeting(for: snapshot, language: language)
+        let primary = QuotaWindowSelector.primary(in: snapshot.limits, preference: preference)
+        let ordered = primary.map { [$0] } ?? []
+        let all = ordered + QuotaWindowSelector.secondary(in: snapshot.limits, preference: preference)
+        limits = Array(all.prefix(3))
+        extraLimitCount = max(0, all.count - limits.count)
+        balances = snapshot.balances
+        detail = snapshot.detail
+    }
+
+    private static func greeting(for snapshot: ProviderSnapshot, language: AppLanguage) -> String {
+        if snapshot.id == .deepseek {
+            switch snapshot.activity {
+            case .connected, .idle:
+                return language.text("我在呢，白饭我就放心吃了", "I'm here! Now I can enjoy my rice in peace~")
+            default:
+                break
+            }
+        }
+        return switch snapshot.activity {
         case .working: language.text("我正在认真干活呢！", "I'm working on it!")
         case .thinking: language.text("让我再想一想～", "Let me think for a moment…")
         case .waitingApproval: language.text("这里需要你确认一下哦。", "I need your approval here.")
@@ -17,13 +36,6 @@ struct PetSpeechContent {
         case .offline: language.text("这台电脑上暂时没有我的任务。", "No local task is running for me.")
         case .connected: language.text("我在呢，额度帮你看好了！", "I'm here. Here's your usage!")
         }
-        let primary = QuotaWindowSelector.primary(in: snapshot.limits, preference: preference)
-        let ordered = primary.map { [$0] } ?? []
-        let all = ordered + QuotaWindowSelector.secondary(in: snapshot.limits, preference: preference)
-        limits = Array(all.prefix(3))
-        extraLimitCount = max(0, all.count - limits.count)
-        balances = snapshot.balances
-        detail = snapshot.detail
     }
 }
 

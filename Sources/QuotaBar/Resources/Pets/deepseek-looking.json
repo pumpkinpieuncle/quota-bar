@@ -4,5 +4,8 @@
   "frameCount": 100,
   "fps": 10,
   "source": "PC2005-cloud/dsh-pet 0.3.8/assets/webm/东张西望.webm",
-  "sourceSHA256": "a20ed02ccc5e72075a3ca83fabb57d9aac5ded699f52d00ec6de72069799fcd5"
+  "sourceSHA256": "a20ed02ccc5e72075a3ca83fabb57d9aac5ded699f52d00ec6de72069799fcd5",
+  "referenceHeight": 133,
+  "bottomInset": 15,
+  "horizontalOffset": 0
 }

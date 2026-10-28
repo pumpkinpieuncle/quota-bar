@@ -1,0 +1,1052 @@
+{
+  "version": 1,
+  "updatedAt": "2026-10-28T14:35:04.169414+00:00",
+  "budget": "free_only",
+  "publish": false,
+  "scope": "Six remaining unique actions for all five non-DeepSeek pets. Waiting/attention may reuse appropriate continuous greeting/thinking clips, as existing sheets already alias them.",
+  "priority": "Cover working for all providers, then thinking, stretching, snack, dancing, sleeping.",
+  "jobs": [
+    {
+      "id": "claude-working",
+      "provider": "claude",
+      "action": "working",
+      "label": "认真工作",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/claude-neutral-green.png"
+      ],
+      "referenceSHA256": "2d76cce87b8d6742eec552a89879ed4aae692fdc66dfe9dc1b21da38e716b68c",
+      "promptFile": "docs/pet-motion-prompts/extra/claude-working.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38449814706224130",
+      "submittedAt": "2026-10-28T19:00:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/claude-working-source.mp4",
+      "inspectionReport": "dist/pet-motion/claude-working-inspection.json",
+      "visualReview": "Transparent contact sheet, reading motion and loop reviewed; every frame visible and within shared viewport. Neutral-pose size remains 150pt.",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0x00FF00",
+      "submissionEvidence": "Seedance 2.0 Mini, expected five minutes, daily free quota explicitly stated after confirmation.",
+      "attempts": [
+        {
+          "status": "quota_exhausted",
+          "conversationURL": "https://www.doubao.com/chat/38450129702895874",
+          "submittedAt": "2026-10-28T18:27:00+08:00",
+          "submissionEvidence": "After confirming parameters, UI explicitly returned: 今日视频生成免费额度已用完。开通订阅畅享更多额度。 No wait estimate or video card appeared.",
+          "quotaEvidenceScreenshot": "dist/pet-motion/extra-quota-exhausted-20261028.png",
+          "account": "Free Quota Account"
+        }
+      ],
+      "account": "Free Quota Account",
+      "importConfiguration": "docs/pet-motion-imports.json#claude-working",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/claude-working.png",
+        "Sources/QuotaBar/Resources/Pets/claude-working.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "codex-working",
+      "provider": "codex",
+      "action": "working",
+      "label": "认真工作",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/codex-neutral-green.png"
+      ],
+      "referenceSHA256": "095d4687c1e8f2245cb0b795621105a9e89d3d2ea9c7c40c52535b82c736bc6c",
+      "promptFile": "docs/pet-motion-prompts/extra/codex-working.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38449867131363586",
+      "submittedAt": "2026-10-28T19:02:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/codex-working-source.mp4",
+      "inspectionReport": "dist/pet-motion/codex-working-inspection.json",
+      "visualReview": "Transparent contact sheet, reading motion and loop reviewed; every frame visible and within shared viewport. Neutral-pose size remains 150pt.",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "submissionEvidence": "After parameter confirmation, actual UI reads 视频生成中. Prompt explicitly restricted to daily free quota; no purchase or paid option selected.",
+      "importConfiguration": "docs/pet-motion-imports.json#codex-working",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/codex-working.png",
+        "Sources/QuotaBar/Resources/Pets/codex-working.json"
+      ],
+      "importedFrameCount": 223
+    },
+    {
+      "id": "grok-working",
+      "provider": "grok",
+      "action": "working",
+      "label": "认真工作",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/grok-neutral-green.png"
+      ],
+      "referenceSHA256": "6e3fd437bbc0b3d324a94b63d23fa2d20ca704effea8fddba757770681dfa30a",
+      "promptFile": "docs/pet-motion-prompts/extra/grok-working.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38449867278156802",
+      "submittedAt": "2026-10-28T19:04:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/grok-working-source.mp4",
+      "inspectionReport": "dist/pet-motion/grok-working-inspection.json",
+      "visualReview": "Transparent contact sheet, reading motion and loop reviewed; every frame visible and within shared viewport. Neutral-pose size remains 150pt.",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "submissionEvidence": "Seedance 2.0 Mini, expected five minutes, daily free quota explicitly stated after confirmation.",
+      "importConfiguration": "docs/pet-motion-imports.json#grok-working",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/grok-working.png",
+        "Sources/QuotaBar/Resources/Pets/grok-working.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "gemini-working",
+      "provider": "gemini",
+      "action": "working",
+      "label": "认真工作",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/gemini-neutral-green.png"
+      ],
+      "referenceSHA256": "606560303ce2ffdbc6153f9953f076bdf7a0f9531b3c021e11b17ed27b870003",
+      "promptFile": "docs/pet-motion-prompts/extra/gemini-working.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38450130225574914",
+      "submittedAt": "2026-10-28T19:07:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/gemini-working-source.mp4",
+      "inspectionReport": "dist/pet-motion/gemini-working-inspection.json",
+      "visualReview": "Transparent contact sheet, reading motion and loop reviewed; every frame visible and within shared viewport. Neutral-pose size remains 150pt.",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "submissionEvidence": "UI says 视频生成中 after free-only confirmation; additionally 额度紧张，晚点我要休息一下了. No exhaustion yet.",
+      "importConfiguration": "docs/pet-motion-imports.json#gemini-working",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/gemini-working.png",
+        "Sources/QuotaBar/Resources/Pets/gemini-working.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "kimi-working",
+      "provider": "kimi",
+      "action": "working",
+      "label": "认真工作",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/kimi-neutral-magenta.png"
+      ],
+      "referenceSHA256": "2be1f2690d2eb7cf62c49d2b4db8cdbe60ecfe39be96ac2a7669438abdce5f28",
+      "promptFile": "docs/pet-motion-prompts/extra/kimi-working.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38449867467297026",
+      "submittedAt": "2026-10-28T19:10:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/kimi-working-source.mp4",
+      "inspectionReport": "dist/pet-motion/kimi-working-inspection.json",
+      "visualReview": "Transparent contact sheet, reading motion and loop reviewed; every frame visible and within shared viewport. Neutral-pose size remains 150pt.",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0xFF00FF",
+      "account": "Free Quota Account",
+      "submissionEvidence": "Seedance 2.0 Mini, expected five minutes, daily free quota explicitly stated after confirmation.",
+      "importConfiguration": "docs/pet-motion-imports.json#kimi-working",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/kimi-working.png",
+        "Sources/QuotaBar/Resources/Pets/kimi-working.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "claude-thinking",
+      "provider": "claude",
+      "action": "thinking",
+      "label": "思考",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/claude-neutral-green.png"
+      ],
+      "referenceSHA256": "2d76cce87b8d6742eec552a89879ed4aae692fdc66dfe9dc1b21da38e716b68c",
+      "promptFile": "docs/pet-motion-prompts/extra/claude-thinking.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38449884677859842",
+      "submittedAt": "2026-10-28T19:33:45.078920+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/claude-thinking-source.mp4",
+      "inspectionReport": "dist/pet-motion/claude-thinking-inspection.json",
+      "visualReview": "Correct character identity confirmed from extracted frames. Transparent edges, complete thinking gesture, and neutral loop reviewed. All 235 frames visible within the viewport; shared 150 pt neutral height.",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "submissionEvidence": "Original prompt sent once, explicitly requested parameter confirmation answered once. UI states Seedance 2.0 Mini, expected five minutes, daily free quota.",
+      "attempts": [
+        {
+          "account": "Free Quota Account",
+          "status": "quota_exhausted",
+          "conversationURL": "https://www.doubao.com/chat/38449884263791362",
+          "submittedAt": "2026-10-28T19:13:00+08:00",
+          "submissionEvidence": "After parameter confirmation, UI explicitly returned: 今日视频生成免费额度已用完。开通订阅畅享更多额度。 No generation wait or video card."
+        }
+      ],
+      "generationConfirmedAt": "2026-10-28T19:34:00+08:00",
+      "importConfiguration": "docs/pet-motion-imports.json#claude-thinking",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/claude-thinking.png",
+        "Sources/QuotaBar/Resources/Pets/claude-thinking.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "codex-thinking",
+      "provider": "codex",
+      "action": "thinking",
+      "label": "思考",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/codex-neutral-green.png"
+      ],
+      "referenceSHA256": "095d4687c1e8f2245cb0b795621105a9e89d3d2ea9c7c40c52535b82c736bc6c",
+      "promptFile": "docs/pet-motion-prompts/extra/codex-thinking.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38449884787544066",
+      "submittedAt": "2026-10-28T19:36:03.740257+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/codex-thinking-source.mp4",
+      "inspectionReport": "dist/pet-motion/codex-thinking-inspection.json",
+      "visualReview": "Correct character identity confirmed from extracted frames. Transparent edges, complete thinking gesture, and neutral loop reviewed. All 235 frames visible within the viewport; shared 150 pt neutral height.",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "generationConfirmedAt": "2026-10-28T19:36:00+08:00",
+      "submissionEvidence": "Initial task sent once, requested parameter confirmation answered once. Seedance 2.0 Mini, five-minute estimate, daily free quota explicitly stated.",
+      "importConfiguration": "docs/pet-motion-imports.json#codex-thinking",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/codex-thinking.png",
+        "Sources/QuotaBar/Resources/Pets/codex-thinking.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "grok-thinking",
+      "provider": "grok",
+      "action": "thinking",
+      "label": "思考",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/grok-neutral-green.png"
+      ],
+      "referenceSHA256": "6e3fd437bbc0b3d324a94b63d23fa2d20ca704effea8fddba757770681dfa30a",
+      "promptFile": "docs/pet-motion-prompts/extra/grok-thinking.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38450130704111618",
+      "submittedAt": "2026-10-28T19:38:23.023455+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/grok-thinking-source.mp4",
+      "inspectionReport": "dist/pet-motion/grok-thinking-inspection.json",
+      "visualReview": "Correct character identity confirmed from extracted frames. Transparent edges, complete thinking gesture, and neutral loop reviewed. All 235 frames visible within the viewport; shared 150 pt neutral height.",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "generationConfirmedAt": "2026-10-28T19:38:00+08:00",
+      "submissionEvidence": "Initial task once, requested parameter confirmation once. Seedance 2.0 Mini, expected five minutes, daily free quota explicitly stated.",
+      "lastCheckedAt": "2026-10-28T11:43:39.053827+00:00",
+      "lastCheckEvidence": "Original conversation still shows five-minute waiting response, no video or explicit failure; preserved waiting, no resend.",
+      "importConfiguration": "docs/pet-motion-imports.json#grok-thinking",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/grok-thinking.png",
+        "Sources/QuotaBar/Resources/Pets/grok-thinking.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "gemini-thinking",
+      "provider": "gemini",
+      "action": "thinking",
+      "label": "思考",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/gemini-neutral-green.png"
+      ],
+      "referenceSHA256": "606560303ce2ffdbc6153f9953f076bdf7a0f9531b3c021e11b17ed27b870003",
+      "promptFile": "docs/pet-motion-prompts/extra/gemini-thinking.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38450005496172546",
+      "submittedAt": "2026-10-28T19:42:25.050910+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/gemini-thinking-source.mp4",
+      "inspectionReport": "dist/pet-motion/gemini-thinking-inspection.json",
+      "visualReview": "Correct character identity confirmed from extracted frames. Transparent edges, complete thinking gesture, and neutral loop reviewed. All 235 frames visible within the viewport; shared 150 pt neutral height.",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "generationConfirmedAt": "2026-10-28T19:42:00+08:00",
+      "submissionEvidence": "Initial task once, requested confirmation once. Seedance 2.0 Mini, five-minute wait, daily free quota. UI also says quota tight but not exhausted.",
+      "downloadCorrection": {
+        "wrongVideo": "dist/pet-motion/gemini-thinking-mismatched-grok-diagnostic.mp4",
+        "wrongInspection": "dist/pet-motion/gemini-thinking-mismatched-grok-inspection.json",
+        "reason": "Downloaded media had Grok identity despite Gemini conversation page; original player must be checked.",
+        "resolved": true,
+        "correctedSHA256": "d73313d583a96d5225159577c1d2a654dbf065bab4266d4599bfa26fe36e1286"
+      },
+      "importConfiguration": "docs/pet-motion-imports.json#gemini-thinking",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/gemini-thinking.png",
+        "Sources/QuotaBar/Resources/Pets/gemini-thinking.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "kimi-thinking",
+      "provider": "kimi",
+      "action": "thinking",
+      "label": "思考",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/kimi-neutral-magenta.png"
+      ],
+      "referenceSHA256": "2be1f2690d2eb7cf62c49d2b4db8cdbe60ecfe39be96ac2a7669438abdce5f28",
+      "promptFile": "docs/pet-motion-prompts/extra/kimi-thinking.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38449867901016834",
+      "submittedAt": "2026-10-28T19:44:33.171533+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/kimi-thinking-source.mp4",
+      "inspectionReport": "dist/pet-motion/kimi-thinking-inspection.json",
+      "visualReview": "Correct character identity confirmed from extracted frames. Transparent edges, complete thinking gesture, and neutral loop reviewed. All 235 frames visible within the viewport; shared 150 pt neutral height.",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0xFF00FF",
+      "account": "Free Quota Account",
+      "submissionEvidence": "Original conversation has Seedance 2.0 Mini daily-free five-minute response and completed playable video; recovered without resending.",
+      "importConfiguration": "docs/pet-motion-imports.json#kimi-thinking",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/kimi-thinking.png",
+        "Sources/QuotaBar/Resources/Pets/kimi-thinking.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "claude-stretching",
+      "provider": "claude",
+      "action": "stretching",
+      "label": "伸懒腰",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/claude-neutral-green.png"
+      ],
+      "referenceSHA256": "2d76cce87b8d6742eec552a89879ed4aae692fdc66dfe9dc1b21da38e716b68c",
+      "promptFile": "docs/pet-motion-prompts/extra/claude-stretching.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38449868340682754",
+      "submittedAt": "2026-10-28T20:16:22.054269+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/claude-stretching-source.mp4",
+      "inspectionReport": "dist/pet-motion/claude-stretching-inspection.json",
+      "visualReview": "Correct character identity and complete stretch reviewed on light/dark backgrounds. All235 frames visible within the native viewport; fixed neutral calibration maintains150pt height. Loop seam and side padding reviewed.",
+      "nextAction": "Complete: installed locally; packaged and installed PNG/JSON hashes verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "submissionEvidence": "Initial prompt sent once. Rights dialog disappeared on read-only recheck, no second click by agent; original task reached parameter confirmation. Parameter confirmation sent once, UI 视频生成中. Actor of dialog dismissal not observed.",
+      "attempts": [
+        {
+          "status": "quota_exhausted",
+          "account": "Free Quota Account",
+          "conversationURL": "https://www.doubao.com/chat/38449867965526274",
+          "submittedAt": "2026-10-28T19:55:11.820593+08:00",
+          "submissionEvidence": "今日视频生成免费额度已用完。开通订阅畅享更多额度。",
+          "quotaEvidenceScreenshot": "dist/pet-motion/extra-quota-exhausted-third-account-20261028.png"
+        }
+      ],
+      "rightsAuthorizationEvidence": {
+        "priorUserConfirmedAt": "2026-10-28T15:34:20+08:00",
+        "question": "豆包已弹出“安全确认”：需确认上传素材已获充分授权，并由使用者承担相关责任。是否授权我点击“确认”，继续生成这段 Claude 桌宠动画？",
+        "userAnswer": "授权，点击确认继续生成",
+        "scopeContinuation": "2026-10-28T16:24:37+08:00 用户要求其他桌宠也继续生成；2026-10-28T20:11:42+08:00 用户换号并要求下一个动作。"
+      },
+      "generationConfirmedAt": "2026-10-28T20:23:00.938796+08:00",
+      "importConfiguration": "docs/pet-motion-imports.json#claude-stretching",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/claude-stretching.png",
+        "Sources/QuotaBar/Resources/Pets/claude-stretching.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "codex-stretching",
+      "provider": "codex",
+      "action": "stretching",
+      "label": "伸懒腰",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/codex-neutral-green.png"
+      ],
+      "referenceSHA256": "095d4687c1e8f2245cb0b795621105a9e89d3d2ea9c7c40c52535b82c736bc6c",
+      "promptFile": "docs/pet-motion-prompts/extra/codex-stretching.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38449868582150146",
+      "submittedAt": "2026-10-28T20:25:32.155266+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/codex-stretching-source.mp4",
+      "inspectionReport": "dist/pet-motion/codex-stretching-inspection.json",
+      "visualReview": "Correct character identity and complete stretch reviewed on light/dark backgrounds. All235 frames visible within the native viewport; fixed neutral calibration maintains150pt height. Loop seam and side padding reviewed.",
+      "nextAction": "Complete: installed locally; packaged and installed PNG/JSON hashes verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "generationConfirmedAt": "2026-10-28T20:26:14.478567+08:00",
+      "submissionEvidence": "Initial prompt once; requested parameter confirmation once; UI explicitly 视频生成中 after free-only confirmation.",
+      "importConfiguration": "docs/pet-motion-imports.json#codex-stretching",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/codex-stretching.png",
+        "Sources/QuotaBar/Resources/Pets/codex-stretching.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "grok-stretching",
+      "provider": "grok",
+      "action": "stretching",
+      "label": "伸懒腰",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/grok-neutral-green.png"
+      ],
+      "referenceSHA256": "6e3fd437bbc0b3d324a94b63d23fa2d20ca704effea8fddba757770681dfa30a",
+      "promptFile": "docs/pet-motion-prompts/extra/grok-stretching.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38450131452918274",
+      "submittedAt": "2026-10-28T20:43:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/grok-stretching-source.mp4",
+      "inspectionReport": "dist/pet-motion/grok-stretching-inspection.json",
+      "visualReview": "Correct character identity and complete stretch reviewed on light/dark backgrounds. All235 frames visible within the native viewport; fixed neutral calibration maintains150pt height. Loop seam and side padding reviewed.",
+      "nextAction": "Complete: installed locally; packaged and installed PNG/JSON hashes verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "submissionEvidence": "User reports manually sending. Original conversation shows manual video prompt20:43, user 开始20:44, then Seedance2.0 Mini five-minute daily-free wait response. Agent only attempted stale video-mode selector (timed out); no agent retry prompt/send/confirmation occurred.",
+      "lastCheckedAt": "2026-10-28T12:35:55.097123+00:00",
+      "lastCheckEvidence": "At20:35 original conversation remains20:27 submitting-text only, no card/model/wait estimate, no explicit failure. Kept submission_uncertain, no duplicate.",
+      "attempts": [
+        {
+          "status": "not_submitted_confirmed",
+          "account": "Free Quota Account",
+          "conversationURL": "https://www.doubao.com/chat/38450131452918274",
+          "submittedAt": "2026-10-28T20:27:42.846271+08:00",
+          "checkedAt": "2026-10-28T12:43:53.822955+00:00",
+          "evidence": "After15-minute wait, status-only query returned: 没有发现20:27承诺提交后实际创建或提交的Grok伸懒腰视频生成任务记录。",
+          "evidenceScreenshot": "dist/pet-motion/grok-stretching-not-submitted-20261028.png"
+        }
+      ],
+      "generationConfirmedAt": "2026-10-28T20:44:00+08:00",
+      "importConfiguration": "docs/pet-motion-imports.json#grok-stretching",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/grok-stretching.png",
+        "Sources/QuotaBar/Resources/Pets/grok-stretching.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "gemini-stretching",
+      "provider": "gemini",
+      "action": "stretching",
+      "label": "伸懒腰",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/gemini-neutral-green.png"
+      ],
+      "referenceSHA256": "606560303ce2ffdbc6153f9953f076bdf7a0f9531b3c021e11b17ed27b870003",
+      "promptFile": "docs/pet-motion-prompts/extra/gemini-stretching.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38449885507573762",
+      "submittedAt": "2026-10-28T20:30:45.007711+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/gemini-stretching-source.mp4",
+      "inspectionReport": "dist/pet-motion/gemini-stretching-inspection.json",
+      "visualReview": "Correct character identity and complete stretch reviewed on light/dark backgrounds. All235 frames visible within the native viewport; fixed neutral calibration maintains150pt height. Loop seam and side padding reviewed.",
+      "nextAction": "Complete: installed locally; packaged and installed PNG/JSON hashes verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "generationConfirmedAt": "2026-10-28T20:32:00.473640+08:00",
+      "submissionEvidence": "Initial prompt once, requested parameter confirmation once; UI 视频生成中 after free-only confirmation.",
+      "importConfiguration": "docs/pet-motion-imports.json#gemini-stretching",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/gemini-stretching.png",
+        "Sources/QuotaBar/Resources/Pets/gemini-stretching.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "kimi-stretching",
+      "provider": "kimi",
+      "action": "stretching",
+      "label": "伸懒腰",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/kimi-neutral-magenta.png"
+      ],
+      "referenceSHA256": "2be1f2690d2eb7cf62c49d2b4db8cdbe60ecfe39be96ac2a7669438abdce5f28",
+      "promptFile": "docs/pet-motion-prompts/extra/kimi-stretching.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38450037397616898",
+      "submittedAt": "2026-10-28T20:34:14.802026+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/kimi-stretching-source.mp4",
+      "inspectionReport": "dist/pet-motion/kimi-stretching-inspection.json",
+      "visualReview": "Correct character identity and complete stretch reviewed on light/dark backgrounds. All235 frames visible within the native viewport; fixed neutral calibration maintains150pt height. Loop seam and side padding reviewed.",
+      "nextAction": "Complete: installed locally; packaged and installed PNG/JSON hashes verified.",
+      "backgroundKey": "0xFF00FF",
+      "account": "Free Quota Account",
+      "generationConfirmedAt": "2026-10-28T20:35:18.522977+08:00",
+      "submissionEvidence": "Initial prompt once, requested parameter confirmation once. UI 视频生成中 after free-only confirmation.",
+      "importConfiguration": "docs/pet-motion-imports.json#kimi-stretching",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/kimi-stretching.png",
+        "Sources/QuotaBar/Resources/Pets/kimi-stretching.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "claude-snack",
+      "provider": "claude",
+      "action": "snack",
+      "label": "吃点东西",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/claude-neutral-green.png"
+      ],
+      "referenceSHA256": "2d76cce87b8d6742eec552a89879ed4aae692fdc66dfe9dc1b21da38e716b68c",
+      "promptFile": "docs/pet-motion-prompts/extra/claude-snack.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38449870169763330",
+      "submittedAt": "2026-10-28T22:17:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/claude-snack-source.mp4",
+      "inspectionReport": "dist/pet-motion/claude-snack-inspection.json",
+      "visualReview": "verified",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "submissionEvidence": "本次使用 Seedance 2.0 Mini 生成，预计等待 5 分钟。视频生成好后，我会主动发送给你。本次生成将消耗每日免费额度。",
+      "importConfiguration": "docs/pet-motion-imports.json#claude-snack",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/claude-snack.png",
+        "Sources/QuotaBar/Resources/Pets/claude-snack.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "codex-snack",
+      "provider": "codex",
+      "action": "snack",
+      "label": "吃点东西",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/codex-neutral-green.png"
+      ],
+      "referenceSHA256": "095d4687c1e8f2245cb0b795621105a9e89d3d2ea9c7c40c52535b82c736bc6c",
+      "promptFile": "docs/pet-motion-prompts/extra/codex-snack.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38450007717205762",
+      "submittedAt": "2026-10-28T22:20:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/codex-snack-source.mp4",
+      "inspectionReport": "dist/pet-motion/codex-snack-inspection.json",
+      "visualReview": "verified",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "submissionEvidence": "本次使用 Seedance 2.0 Mini 生成，预计等待 5 分钟。视频生成好后，我会主动发送给你。本次生成将消耗每日免费额度。",
+      "importConfiguration": "docs/pet-motion-imports.json#codex-snack",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/codex-snack.png",
+        "Sources/QuotaBar/Resources/Pets/codex-snack.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "grok-snack",
+      "provider": "grok",
+      "action": "snack",
+      "label": "吃点东西",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/grok-neutral-green.png"
+      ],
+      "referenceSHA256": "6e3fd437bbc0b3d324a94b63d23fa2d20ca704effea8fddba757770681dfa30a",
+      "promptFile": "docs/pet-motion-prompts/extra/grok-snack.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38450007720349698",
+      "submittedAt": "2026-10-28T22:23:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/grok-snack-source.mp4",
+      "inspectionReport": "dist/pet-motion/grok-snack-inspection.json",
+      "visualReview": "verified",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "submissionEvidence": "本次使用 Seedance 2.0 Mini 生成，预计等待 5 分钟。视频生成好后，我会主动发送给你。本次生成将消耗每日免费额度。",
+      "importConfiguration": "docs/pet-motion-imports.json#grok-snack",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/grok-snack.png",
+        "Sources/QuotaBar/Resources/Pets/grok-snack.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "gemini-snack",
+      "provider": "gemini",
+      "action": "snack",
+      "label": "吃点东西",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/gemini-neutral-green.png"
+      ],
+      "referenceSHA256": "606560303ce2ffdbc6153f9953f076bdf7a0f9531b3c021e11b17ed27b870003",
+      "promptFile": "docs/pet-motion-prompts/extra/gemini-snack.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38449887157479938",
+      "submittedAt": "2026-10-28T22:26:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/gemini-snack-source.mp4",
+      "inspectionReport": "dist/pet-motion/gemini-snack-inspection.json",
+      "visualReview": "verified",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "submissionEvidence": "本次使用 Seedance 2.0 Mini 生成，预计等待 5 分钟。视频生成好后，我会主动发送给你。本次生成将消耗每日免费额度。",
+      "importConfiguration": "docs/pet-motion-imports.json#gemini-snack",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/gemini-snack.png",
+        "Sources/QuotaBar/Resources/Pets/gemini-snack.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "kimi-snack",
+      "provider": "kimi",
+      "action": "snack",
+      "label": "吃点东西",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/kimi-neutral-magenta.png"
+      ],
+      "referenceSHA256": "2be1f2690d2eb7cf62c49d2b4db8cdbe60ecfe39be96ac2a7669438abdce5f28",
+      "promptFile": "docs/pet-motion-prompts/extra/kimi-snack.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38450007888304898",
+      "submittedAt": "2026-10-28T22:29:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/kimi-snack-source.mp4",
+      "inspectionReport": "dist/pet-motion/kimi-snack-inspection.json",
+      "visualReview": "verified",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0xFF00FF",
+      "account": "Free Quota Account",
+      "submissionEvidence": "本次使用 Seedance 2.0 Mini 生成，预计等待 5 分钟。视频生成好后，我会主动发送给你。本次生成将消耗每日免费额度。",
+      "importConfiguration": "docs/pet-motion-imports.json#kimi-snack",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/kimi-snack.png",
+        "Sources/QuotaBar/Resources/Pets/kimi-snack.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "claude-dancing",
+      "provider": "claude",
+      "action": "dancing",
+      "label": "跳小舞",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/claude-neutral-green.png"
+      ],
+      "referenceSHA256": "2d76cce87b8d6742eec552a89879ed4aae692fdc66dfe9dc1b21da38e716b68c",
+      "promptFile": "docs/pet-motion-prompts/extra/claude-dancing.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38450091733877506",
+      "submittedAt": "2026-10-28T23:02:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/claude-dancing-source.mp4",
+      "inspectionReport": "dist/pet-motion/claude-dancing-inspection.json",
+      "visualReview": "Transparent contact sheet, reading motion and loop reviewed; every frame visible and within shared viewport. Neutral-pose size remains 150pt.",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "importConfiguration": "docs/pet-motion-imports.json#claude-dancing",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/claude-dancing.png",
+        "Sources/QuotaBar/Resources/Pets/claude-dancing.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "codex-dancing",
+      "provider": "codex",
+      "action": "dancing",
+      "label": "跳小舞",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/codex-neutral-green.png"
+      ],
+      "referenceSHA256": "095d4687c1e8f2245cb0b795621105a9e89d3d2ea9c7c40c52535b82c736bc6c",
+      "promptFile": "docs/pet-motion-prompts/extra/codex-dancing.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38450008339209730",
+      "submittedAt": "2026-10-28T23:04:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/codex-dancing-source.mp4",
+      "inspectionReport": "dist/pet-motion/codex-dancing-inspection.json",
+      "visualReview": "Transparent contact sheet, reading motion and loop reviewed; every frame visible and within shared viewport. Neutral-pose size remains 150pt.",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "importConfiguration": "docs/pet-motion-imports.json#codex-dancing",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/codex-dancing.png",
+        "Sources/QuotaBar/Resources/Pets/codex-dancing.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "grok-dancing",
+      "provider": "grok",
+      "action": "dancing",
+      "label": "跳小舞",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/grok-neutral-green.png"
+      ],
+      "referenceSHA256": "6e3fd437bbc0b3d324a94b63d23fa2d20ca704effea8fddba757770681dfa30a",
+      "promptFile": "docs/pet-motion-prompts/extra/grok-dancing.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38450008294146306",
+      "submittedAt": "2026-10-28T23:07:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/grok-dancing-source.mp4",
+      "inspectionReport": "dist/pet-motion/grok-dancing-inspection.json",
+      "visualReview": "Transparent contact sheet, reading motion and loop reviewed; every frame visible and within shared viewport. Neutral-pose size remains 150pt.",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "importConfiguration": "docs/pet-motion-imports.json#grok-dancing",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/grok-dancing.png",
+        "Sources/QuotaBar/Resources/Pets/grok-dancing.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "gemini-dancing",
+      "provider": "gemini",
+      "action": "dancing",
+      "label": "跳小舞",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/gemini-neutral-green.png"
+      ],
+      "referenceSHA256": "606560303ce2ffdbc6153f9953f076bdf7a0f9531b3c021e11b17ed27b870003",
+      "promptFile": "docs/pet-motion-prompts/extra/gemini-dancing.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38450092045059330",
+      "submittedAt": "2026-10-28T23:12:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/gemini-dancing-source.mp4",
+      "inspectionReport": "dist/pet-motion/gemini-dancing-inspection.json",
+      "visualReview": "Transparent contact sheet, reading motion and loop reviewed; every frame visible and within shared viewport. Neutral-pose size remains 150pt.",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "importConfiguration": "docs/pet-motion-imports.json#gemini-dancing",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/gemini-dancing.png",
+        "Sources/QuotaBar/Resources/Pets/gemini-dancing.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "kimi-dancing",
+      "provider": "kimi",
+      "action": "dancing",
+      "label": "跳小舞",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/kimi-neutral-magenta.png"
+      ],
+      "referenceSHA256": "2be1f2690d2eb7cf62c49d2b4db8cdbe60ecfe39be96ac2a7669438abdce5f28",
+      "promptFile": "docs/pet-motion-prompts/extra/kimi-dancing.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38450133766331650",
+      "submittedAt": "2026-10-28T23:13:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/kimi-dancing-source.mp4",
+      "inspectionReport": "dist/pet-motion/kimi-dancing-inspection.json",
+      "visualReview": "Transparent contact sheet, reading motion and loop reviewed; every frame visible and within shared viewport. Neutral-pose size remains 150pt.",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0xFF00FF",
+      "account": "Free Quota Account",
+      "importConfiguration": "docs/pet-motion-imports.json#kimi-dancing",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/kimi-dancing.png",
+        "Sources/QuotaBar/Resources/Pets/kimi-dancing.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "claude-sleeping",
+      "provider": "claude",
+      "action": "sleeping",
+      "label": "打盹",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/claude-neutral-green.png"
+      ],
+      "referenceSHA256": "2d76cce87b8d6742eec552a89879ed4aae692fdc66dfe9dc1b21da38e716b68c",
+      "promptFile": "docs/pet-motion-prompts/extra/claude-sleeping.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38449888389882370",
+      "submittedAt": "2026-10-29T00:03:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/claude-sleeping-source.mp4",
+      "inspectionReport": "dist/pet-motion/claude-sleeping-inspection.json",
+      "visualReview": "Transparent contact sheet, reading motion and loop reviewed; every frame visible and within shared viewport. Neutral-pose size remains 150pt.",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "importConfiguration": "docs/pet-motion-imports.json#claude-sleeping",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/claude-sleeping.png",
+        "Sources/QuotaBar/Resources/Pets/claude-sleeping.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "codex-sleeping",
+      "provider": "codex",
+      "action": "sleeping",
+      "label": "打盹",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/codex-neutral-green.png"
+      ],
+      "referenceSHA256": "095d4687c1e8f2245cb0b795621105a9e89d3d2ea9c7c40c52535b82c736bc6c",
+      "promptFile": "docs/pet-motion-prompts/extra/codex-sleeping.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38450008863036674",
+      "submittedAt": "2026-10-29T00:05:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/codex-sleeping-source.mp4",
+      "inspectionReport": "dist/pet-motion/codex-sleeping-inspection.json",
+      "visualReview": "Transparent contact sheet, reading motion and loop reviewed; every frame visible and within shared viewport. Neutral-pose size remains 150pt.",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "importConfiguration": "docs/pet-motion-imports.json#codex-sleeping",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/codex-sleeping.png",
+        "Sources/QuotaBar/Resources/Pets/codex-sleeping.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "grok-sleeping",
+      "provider": "grok",
+      "action": "sleeping",
+      "label": "打盹",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/grok-neutral-green.png"
+      ],
+      "referenceSHA256": "6e3fd437bbc0b3d324a94b63d23fa2d20ca704effea8fddba757770681dfa30a",
+      "promptFile": "docs/pet-motion-prompts/extra/grok-sleeping.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38449888400265474",
+      "submittedAt": "2026-10-29T00:23:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/grok-sleeping-source.mp4",
+      "inspectionReport": "dist/pet-motion/grok-sleeping-inspection.json",
+      "visualReview": "Transparent contact sheet, reading motion and loop reviewed; every frame visible and within shared viewport. Neutral-pose size remains 150pt.",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "importConfiguration": "docs/pet-motion-imports.json#grok-sleeping",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/grok-sleeping.png",
+        "Sources/QuotaBar/Resources/Pets/grok-sleeping.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "gemini-sleeping",
+      "provider": "gemini",
+      "action": "sleeping",
+      "label": "打盹",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/gemini-neutral-green.png"
+      ],
+      "referenceSHA256": "606560303ce2ffdbc6153f9953f076bdf7a0f9531b3c021e11b17ed27b870003",
+      "promptFile": "docs/pet-motion-prompts/extra/gemini-sleeping.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38450092674706690",
+      "submittedAt": "2026-10-29T00:21:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/gemini-sleeping-source.mp4",
+      "inspectionReport": "dist/pet-motion/gemini-sleeping-inspection.json",
+      "visualReview": "Transparent contact sheet, reading motion and loop reviewed; every frame visible and within shared viewport. Neutral-pose size remains 150pt.",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0x00FF00",
+      "account": "Free Quota Account",
+      "importConfiguration": "docs/pet-motion-imports.json#gemini-sleeping",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/gemini-sleeping.png",
+        "Sources/QuotaBar/Resources/Pets/gemini-sleeping.json"
+      ],
+      "importedFrameCount": 235
+    },
+    {
+      "id": "kimi-sleeping",
+      "provider": "kimi",
+      "action": "sleeping",
+      "label": "打盹",
+      "status": "installed_locally",
+      "referenceFiles": [
+        "dist/pet-motion/kimi-neutral-magenta.png"
+      ],
+      "referenceSHA256": "2be1f2690d2eb7cf62c49d2b4db8cdbe60ecfe39be96ac2a7669438abdce5f28",
+      "promptFile": "docs/pet-motion-prompts/extra/kimi-sleeping.txt",
+      "model": "Seedance 2.0 Mini",
+      "duration": 10,
+      "conversationURL": "https://www.doubao.com/chat/38449888364517122",
+      "submittedAt": "2026-10-29T00:19:00+08:00",
+      "expectedWaitMinutes": 5,
+      "rawVideo": "dist/pet-motion/kimi-sleeping-source.mp4",
+      "inspectionReport": "dist/pet-motion/kimi-sleeping-inspection.json",
+      "visualReview": "Transparent contact sheet, reading motion and loop reviewed; every frame visible and within shared viewport. Neutral-pose size remains 150pt.",
+      "nextAction": "Complete: installed locally and packaged resource hash verified.",
+      "backgroundKey": "0xFF00FF",
+      "account": "Free Quota Account",
+      "importConfiguration": "docs/pet-motion-imports.json#kimi-sleeping",
+      "atlasFiles": [
+        "Sources/QuotaBar/Resources/Pets/kimi-sleeping.png",
+        "Sources/QuotaBar/Resources/Pets/kimi-sleeping.json"
+      ],
+      "importedFrameCount": 235
+    }
+  ],
+  "quotaStatus": {
+    "status": "complete",
+    "account": "Free Quota Account",
+    "checkedAt": "2026-10-29T00:25:00+08:00",
+    "evidence": "All 5 sleeping jobs generated successfully on fresh daily quota; all 30 extra motion jobs complete."
+  },
+  "uiVerification": {
+    "loggedInAccount": "Free Quota Account",
+    "model": "Seedance 2.0 Mini",
+    "durationRangeSeconds": [
+      4,
+      15
+    ],
+    "verifiedSelectableDurationSeconds": [
+      5,
+      10
+    ],
+    "requestedDurationSeconds": 10,
+    "aspectRatio": "16:9",
+    "note": "Empty form offered video generation without numeric quota; exhaustion appeared only after actual generation confirmation."
+  },
+  "quotaHistory": [
+    {
+      "status": "exhausted",
+      "checkedAt": "2026-10-28T10:28:24.214950+00:00",
+      "evidence": "今日视频生成免费额度已用完。开通订阅畅享更多额度。",
+      "refreshTimeShown": null,
+      "screenshot": "dist/pet-motion/extra-quota-exhausted-20261028.png",
+      "nextAction": "Stop new submissions. Preserve 29 prepared jobs and the blocked Claude-working conversation. Do not purchase or change accounts."
+    },
+    {
+      "status": "exhausted",
+      "account": "Free Quota Account",
+      "checkedAt": "2026-10-28T11:14:15.011683+00:00",
+      "evidence": "今日视频生成免费额度已用完。开通订阅畅享更多额度。",
+      "conversationURL": "https://www.doubao.com/chat/38449884263791362",
+      "refreshTimeShown": null,
+      "nextAction": "No waiting jobs remain. Preserve 24 prepared jobs and blocked Claude-thinking request until free generation is available; do not purchase or switch accounts."
+    },
+    {
+      "status": "exhausted",
+      "account": "Free Quota Account",
+      "checkedAt": "2026-10-28T11:56:18.604160+00:00",
+      "evidence": "今日视频生成免费额度已用完。开通订阅畅享更多额度。",
+      "conversationURL": "https://www.doubao.com/chat/38449867965526274",
+      "refreshTimeShown": null,
+      "screenshot": "dist/pet-motion/extra-quota-exhausted-third-account-20261028.png",
+      "nextAction": "Stop new submissions; all five thinking sources recovered. Preserve 19 prepared jobs and Claude-stretching quota_exhausted. Do not purchase or change accounts."
+    },
+    {
+      "status": "exhausted",
+      "account": "Free Quota Account",
+      "checkedAt": "2026-10-28T23:25:00+08:00",
+      "evidence": "今日视频生成免费额度已用完。开通订阅畅享更多额度。",
+      "conversationURL": "https://www.doubao.com/chat/38450039554221314",
+      "refreshTimeShown": null,
+      "nextAction": "All 5 dancing jobs completed and built. 5 sleeping jobs prepared and logged quota_exhausted. Switch account to generate final batch (sleeping)."
+    }
+  ],
+  "verification": {
+    "desktopPetTests": "38 passed, including all 35 continuous pet motion resources for all providers.",
+    "packagedResources": "All six providers load; all 30 extra motion PNG/JSON pairs installed and verified.",
+    "viewportCheck": "All 35 continuous clips (idle, greeting, working, thinking, stretching, snack, dancing, sleeping) have completed frame visibility and viewport checks at 150pt.",
+    "loopChecks": "dist/pet-motion/sleeping-loop-checks.json",
+    "nativePreview": "dist/pet-preview-thinking/all-thinking.png (previous thinking batch native-window capture)",
+    "installedApplication": "/Applications/Quota Bar.app",
+    "remainingUngenerated": 0,
+    "published": false,
+    "dancingPreview": null,
+    "installedResourceHashes": null
+  },
+  "submissionPolicy": {
+    "maxPendingSubmissionsPerProviderAction": 1,
+    "waitingAndUncertain": "Only inspect the original conversation for waiting/submission_uncertain jobs. Never resend without explicit failure evidence. Missing video cards or elapsed expected wait time are not failure.",
+    "clickTimeout": "First inspect current/new conversation URL and sent messages; record submission_uncertain if outcome is not proven. Never click send again blindly.",
+    "explicitQuotaFailure": "A previous request explicitly rejected for exhausted quota may be retried after the user switches account or free quota becomes available; preserve the failed attempt evidence.",
+    "source": "User explicitly said: 没有出来结果的时候那个可以等等，不要重复生成"
+  },
+  "currentBatch": {
+    "action": "complete",
+    "completed": 30,
+    "pending": 0,
+    "remainingPrepared": 0,
+    "quotaExhaustedConfirmedThisBatch": false,
+    "note": "All 30 extra motion jobs (working, thinking, stretching, snack, dancing, sleeping) for all 5 providers are 100% generated, built into atlases, and verified."
+  }
+}

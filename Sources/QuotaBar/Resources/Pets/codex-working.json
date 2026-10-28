@@ -1,0 +1,30 @@
+{
+  "columns": 16,
+  "rows": 14,
+  "frameCount": 223,
+  "fps": 24,
+  "source": "Doubao / Seedance 2.0 Mini, generated 2026-10-28",
+  "sourceURL": "https://www.doubao.com/chat/38449867131363586",
+  "sourceSHA256": "6a1cf2442ec5f832d35d76caefec052f895d67b4419efd5a0a811491c0d0ebe3",
+  "sourceClipFrames": [
+    12,
+    241
+  ],
+  "seamBlendFrames": 6,
+  "crop": [
+    384,
+    24,
+    576,
+    680
+  ],
+  "cellSize": [
+    213,
+    252
+  ],
+  "keyColor": "0x00FF00",
+  "calibrationSourceFrame": 6,
+  "processing": "Fixed crop and scale, chromakey, optional despill, neutral-pose seam blend. No synthesized in-between frames.",
+  "referenceHeight": 234,
+  "bottomInset": 9,
+  "horizontalOffset": 0
+}

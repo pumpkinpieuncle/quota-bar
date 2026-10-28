@@ -44,6 +44,8 @@ for action, clip in clips.items():
     count = max(occupied) + 1
     metadata = {
         "columns": 10, "rows": rows, "frameCount": count, "fps": 10,
+        "referenceHeight": 133, "bottomInset": 15,
+        "horizontalOffset": -8 if action == "magic" else 0,
         "source": f"PC2005-cloud/dsh-pet 0.3.8/assets/webm/{clip}.webm",
         "sourceSHA256": hashlib.sha256(video.read_bytes()).hexdigest(),
     }

@@ -46,7 +46,8 @@ final class DesktopPetController: NSObject, NSWindowDelegate {
     private var globalClickMonitor: Any?
     private var observations = Set<AnyCancellable>()
     private var isRestoringPosition = false
-    static let windowSize = CGSize(width: 200, height: 222)
+    static let windowSize = CGSize(width: 260, height: 242)
+    static let spriteSize = CGSize(width: 260, height: 200)
 
     init(model: AppModel) {
         self.model = model
@@ -101,9 +102,11 @@ final class DesktopPetController: NSObject, NSWindowDelegate {
         panel.appearance = NSAppearance(named: .darkAqua)
         panel.delegate = self
 
-        let view = NSHostingView(rootView: DesktopPetView(provider: provider, model: model) { [weak self] in
-            self?.toggleSpeech(for: provider)
-        })
+        let view = NSHostingView(rootView: DesktopPetView(
+            provider: provider, model: model,
+            onClick: { [weak self] in self?.toggleSpeech(for: provider) },
+            onRename: { [weak self] in self?.renamePet(provider) }
+        ))
         view.safeAreaRegions = []
         view.sizingOptions = []
         panel.contentView = view
@@ -159,6 +162,37 @@ final class DesktopPetController: NSObject, NSWindowDelegate {
             setSpeechVisible(false, for: openProvider)
         }
         if shouldShow { setSpeechVisible(true, for: provider) }
+    }
+
+    private func renamePet(_ provider: ProviderID) {
+        let preferences = model.preferences
+        let language = preferences.language
+        setSpeechVisible(false, for: provider)
+        let alert = NSAlert()
+        alert.messageText = language.text("给桌宠改名", "Rename pet")
+        alert.informativeText = language.text("最多 32 个字符，留空恢复默认名字。", "Up to 32 characters. Leave blank to use the default name.")
+        alert.addButton(withTitle: language.text("保存", "Save"))
+        alert.addButton(withTitle: language.text("取消", "Cancel"))
+        alert.addButton(withTitle: language.text("恢复默认", "Reset name"))
+        let field = NSTextField(frame: CGRect(x: 0, y: 0, width: 280, height: 26))
+        field.stringValue = preferences.petName(for: provider)
+        field.placeholderString = provider.title
+        field.setAccessibilityLabel(language.text("桌宠名字", "Pet name"))
+        alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+        // Pet windows never take keyboard focus; only this explicit edit opens
+        // a normal keyboard-capable dialog, then returns focus to the prior app.
+        let previousApp = NSWorkspace.shared.frontmostApplication
+        NSApp.activate(ignoringOtherApps: true)
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            preferences.setPetName(field.stringValue, for: provider)
+        } else if response == .alertThirdButtonReturn {
+            preferences.setPetName("", for: provider)
+        }
+        if previousApp?.processIdentifier != ProcessInfo.processInfo.processIdentifier {
+            previousApp?.activate(options: [])
+        }
     }
 
     func dismissSpeechIfOutside(at point: CGPoint) {
@@ -238,6 +272,7 @@ private struct DesktopPetView: View {
     @ObservedObject var model: AppModel
     @ObservedObject private var preferences: AppPreferences
     let onClick: () -> Void
+    let onRename: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hovering = false
     @State private var artwork: PetArtwork?
@@ -245,10 +280,11 @@ private struct DesktopPetView: View {
     @State private var interactionSerial = 0
     @State private var requestedAnimation: PetAnimation?
 
-    init(provider: ProviderID, model: AppModel, onClick: @escaping () -> Void) {
+    init(provider: ProviderID, model: AppModel, onClick: @escaping () -> Void, onRename: @escaping () -> Void) {
         self.provider = provider
         self.model = model
         self.onClick = onClick
+        self.onRename = onRename
         _preferences = ObservedObject(wrappedValue: model.preferences)
     }
 
@@ -262,20 +298,20 @@ private struct DesktopPetView: View {
     var body: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .top) {
-                TimelineView(.animation(minimumInterval: 1 / 12, paused: reduceMotion)) { timeline in
+                TimelineView(.animation(minimumInterval: 1 / 24, paused: reduceMotion)) { timeline in
                     if let artwork {
                         let elapsed = max(0, timeline.date.timeIntervalSince(animationStarted))
                         PetSpriteView(artwork: artwork, frame: artwork.frameIndex(at: reduceMotion ? 0 : elapsed))
-                            .frame(width: 200, height: 180)
+                            .frame(width: DesktopPetController.spriteSize.width, height: DesktopPetController.spriteSize.height)
                     }
                 }
-                .frame(width: 200, height: 180)
+                .frame(width: DesktopPetController.spriteSize.width, height: DesktopPetController.spriteSize.height)
 
                 PetDragSurface {
                     request(.greeting)
                     onClick()
                 }
-                    .frame(width: 170, height: 180)
+                    .frame(width: 210, height: DesktopPetController.spriteSize.height)
                     .accessibilityLabel(preferences.language.text("点击查看额度，拖动移动桌宠", "Click for quota, drag to move"))
 
                 HStack {
@@ -301,25 +337,37 @@ private struct DesktopPetView: View {
                 .padding(.top, 5)
             }
 
-            HStack(spacing: 5) {
-                Circle().fill(isWaiting ? Color.orange : provider.accent).frame(width: 5, height: 5)
-                Text(provider.title).fontWeight(.semibold)
+            Button(action: onRename) {
+                HStack(spacing: 5) {
+                    Circle().fill(isWaiting ? Color.orange : provider.accent).frame(width: 5, height: 5)
+                    Text(preferences.petName(for: provider))
+                        .fontWeight(.semibold)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Image(systemName: "pencil").font(.system(size: 8))
+                }
+                .font(.system(size: 10, design: .rounded))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(.black.opacity(0.7), in: Capsule())
             }
-            .font(.system(size: 10, design: .rounded))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(.black.opacity(0.7), in: Capsule())
+            .buttonStyle(.plain)
+            .frame(maxWidth: 210)
+            .help(preferences.language.text("点击改名 · \(provider.title)", "Click to rename · \(provider.title)"))
+            .accessibilityLabel(preferences.language.text("修改 \(preferences.petName(for: provider)) 的名字", "Rename \(preferences.petName(for: provider))"))
             Spacer(minLength: 0)
         }
-        .frame(width: 200, height: 222)
+        .frame(width: DesktopPetController.windowSize.width, height: DesktopPetController.windowSize.height)
         .onHover { hovering = $0 }
         .contextMenu {
+            Button(preferences.language.text("修改名字…", "Rename…"), action: onRename)
+            Divider()
             ForEach([PetAnimation.idle, .working] + PetAnimation.leisure(for: provider), id: \.rawValue) { animation in
                 Button(animation.label(language: preferences.language)) { request(animation) }
             }
             Divider()
-            Button(preferences.language.text("收起 \(provider.title) 桌宠", "Hide \(provider.title) pet")) {
+            Button(preferences.language.text("收起 \(preferences.petName(for: provider)) 桌宠", "Hide \(preferences.petName(for: provider)) pet")) {
                 preferences.desktopPets.remove(provider)
             }
         }
@@ -347,20 +395,30 @@ private struct DesktopPetView: View {
             requestedAnimation = nil
             let duration = play(requested)
             if !reduceMotion {
-                try await Task.sleep(for: .seconds(min(10, max(3, duration * 2))))
+                try await Task.sleep(for: .seconds(artwork?.isContinuousVideo == true ? duration : max(3, duration * 2)))
             }
         }
         let base = PetAnimation.base(for: activity)
         _ = play(base)
         guard base == .idle, !reduceMotion else { return }
-        let actions = PetAnimation.leisure(for: provider)
+        let allActions = PetAnimation.leisure(for: provider)
+        // During incremental video imports, do not automatically alternate
+        // smooth clips with the older key-pose sheets. Manual actions remain.
+        let continuousActions = allActions.filter {
+            PetArtwork.hasContinuousAnimation(provider: provider, animation: $0)
+        }
+        let actions = continuousActions.isEmpty ? allActions : continuousActions
         let providerIndex = ProviderID.allCases.firstIndex(of: provider) ?? 0
         var index = providerIndex % actions.count
         while !Task.isCancelled {
-            try await Task.sleep(for: .seconds(6 + Double(providerIndex) * 0.7))
+            let idleDuration = artwork?.duration ?? 1
+            let desiredRest = 6 + Double(providerIndex) * 0.7
+            let rest = artwork?.isContinuousVideo == true
+                ? ceil(desiredRest / idleDuration) * idleDuration : desiredRest
+            try await Task.sleep(for: .seconds(rest))
             try Task.checkCancellation()
             let duration = play(actions[index])
-            try await Task.sleep(for: .seconds(min(10, max(3.5, duration * 2))))
+            try await Task.sleep(for: .seconds(artwork?.isContinuousVideo == true ? duration : max(3.5, duration * 2)))
             try Task.checkCancellation()
             _ = play(.idle)
             index = (index + 1) % actions.count
@@ -401,9 +459,13 @@ private struct PetSpriteView: NSViewRepresentable {
                 y: CGFloat(artwork.rows - 1 - row) * tileHeight,
                 width: tileWidth, height: tileHeight
             )
-            let scale = min(bounds.width / tileWidth, artwork.displayHeight / tileHeight)
+            let scale = PetArtwork.subjectDisplayHeight / artwork.referenceHeight
             let size = CGSize(width: tileWidth * scale, height: tileHeight * scale)
-            let destination = CGRect(x: (bounds.width - size.width) / 2, y: 10, width: size.width, height: size.height)
+            let destination = CGRect(
+                x: (bounds.width - size.width) / 2 - artwork.horizontalOffset * scale,
+                y: 10 - artwork.bottomInset * scale,
+                width: size.width, height: size.height
+            )
             artwork.image.draw(in: destination, from: source, operation: .sourceOver, fraction: 1)
         }
     }

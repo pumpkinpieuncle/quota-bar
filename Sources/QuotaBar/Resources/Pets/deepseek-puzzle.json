@@ -4,5 +4,8 @@
   "frameCount": 100,
   "fps": 10,
   "source": "PC2005-cloud/dsh-pet 0.3.8/assets/webm/原地专心玩魔方.webm",
-  "sourceSHA256": "ad54da175ba86b19a84b73b3169fb418b2df016560bb274283f200aca351e712"
+  "sourceSHA256": "ad54da175ba86b19a84b73b3169fb418b2df016560bb274283f200aca351e712",
+  "referenceHeight": 133,
+  "bottomInset": 15,
+  "horizontalOffset": 0
 }

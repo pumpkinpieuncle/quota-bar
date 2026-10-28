@@ -4,5 +4,8 @@
   "frameCount": 49,
   "fps": 10,
   "source": "PC2005-cloud/dsh-pet 0.3.8/assets/webm/工作状态-垂头叹气冒汗.webm",
-  "sourceSHA256": "ab00c844e62221905574b4c070e0d7b6fa14fb2afa1064c27a160f10e25f7196"
+  "sourceSHA256": "ab00c844e62221905574b4c070e0d7b6fa14fb2afa1064c27a160f10e25f7196",
+  "referenceHeight": 133,
+  "bottomInset": 15,
+  "horizontalOffset": 0
 }
