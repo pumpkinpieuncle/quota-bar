@@ -60,6 +60,18 @@ enum PetAnimation: String, CaseIterable, Sendable {
 
 @MainActor
 struct PetArtwork {
+    // SwiftPM's command-line build accessor searches beside the executable
+    // bundle, while app resources are installed under Contents/Resources.
+    // Resolve that location explicitly so release builds do not depend on a
+    // resource directory that exists only on the build machine.
+    private static let resourceBundle: Bundle? = {
+        if Bundle.main.bundleURL.pathExtension == "app" {
+            guard let url = Bundle.main.resourceURL?.appendingPathComponent("QuotaBar_QuotaBar.bundle") else { return nil }
+            return Bundle(url: url)
+        }
+        return Bundle.module
+    }()
+
     let image: NSImage
     let columns: Int
     let rows: Int
@@ -89,7 +101,7 @@ struct PetArtwork {
             guard let image = image(named: name) else { return nil }
             // Metadata comes from the imported video itself, including clips
             // shorter than ten seconds and their transparent frame geometry.
-            guard let url = Bundle.module.url(forResource: name, withExtension: "json", subdirectory: "Pets"),
+            guard let url = resourceBundle?.url(forResource: name, withExtension: "json", subdirectory: "Pets"),
                   let data = try? Data(contentsOf: url),
                   let info = try? JSONDecoder().decode(AtlasInfo.self, from: data) else { return nil }
             return Self(image: image, columns: info.columns, rows: info.rows,
@@ -130,7 +142,7 @@ struct PetArtwork {
     }
 
     private static func image(named name: String) -> NSImage? {
-        guard let url = Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "Pets") else { return nil }
+        guard let url = resourceBundle?.url(forResource: name, withExtension: "png", subdirectory: "Pets") else { return nil }
         return NSImage(contentsOf: url)
     }
 }

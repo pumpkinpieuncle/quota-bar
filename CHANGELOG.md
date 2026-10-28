@@ -1,5 +1,12 @@
 # Changelog / 更新日志
 
+# Quota Bar 1.5.1
+
+- 额度气泡改为左键点击显示，再次点击或点击别处收起；鼠标经过不再弹窗，拖动也不会打开气泡。
+- 修复 GitHub SwiftPM 构建安装包查找桌宠资源的位置，明确从应用的 Contents/Resources 加载，避免依赖构建机路径。
+- 发布打包新增 `--verify-pet-resources` 检查，在生成安装包之前验证全部模型的动作素材可加载，不读取账号或钥匙串。
+- Fixed resource lookup in packaged SwiftPM builds and added a packaged-app resource smoke check before release creation.
+
 # Quota Bar 1.5.0
 
 - 新增六个模型的独立桌宠开关，支持多只同时显示、拖动、位置与显示状态持久化。

@@ -1010,6 +1010,20 @@ private extension Notification.Name {
 enum QuotaBarApp {
     @MainActor
     static func main() {
+        if CommandLine.arguments.contains("--verify-pet-resources") {
+            for provider in ProviderID.allCases {
+                let actions = Set([PetAnimation.idle, .working, .waiting, .attention] + PetAnimation.leisure(for: provider))
+                for action in actions {
+                    guard let artwork = PetArtwork.load(provider: provider, animation: action),
+                          artwork.image.isValid, artwork.frameCount > 1 else {
+                        print("Missing or invalid pet resource: \(provider.rawValue)/\(action.rawValue)")
+                        exit(1)
+                    }
+                }
+            }
+            print("Packaged pet resources verified for all six providers.")
+            return
+        }
         let application = NSApplication.shared
         let delegate = AppDelegate()
         application.delegate = delegate

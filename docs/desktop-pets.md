@@ -1,8 +1,8 @@
 # Desktop pets
 
-Each provider has an independent paw button in its card, compact row, and the provider manager. All pets start off. Open pets and their positions persist across launches; hiding a provider card or the quota panel does not hide its pet. Drag the character to move it; click to wave hello. Right-click to select an action or hide it.
+Each provider has an independent paw button in its card, compact row, and the provider manager. All pets start off. Open pets and their positions persist across launches; hiding a provider card or the quota panel does not hide its pet. Drag the character to move it; click to wave hello and toggle its quota bubble. Right-click to select an action or hide it.
 
-Hover over a pet to show a speech bubble with its current activity, actual remaining quota, reset times, balances, refresh timestamp, and paused-refresh status. It uses the same quota-window preference as the main panel and explains when data is unavailable. The bubble stays within the visible screen, appears below pets near the top edge, and never takes keyboard focus.
+Left-click a pet to show a speech bubble with its current activity, actual remaining quota, reset times, balances, refresh timestamp, and paused-refresh status. Click again or elsewhere to dismiss it; clicking a different pet switches to that pet's bubble. Hovering only reveals the close button, and dragging does not open a bubble. It uses the same quota-window preference as the main panel and explains when data is unavailable. The bubble stays within the visible screen, appears below pets near the top edge, and never takes keyboard focus.
 
 The Antigravity provider uses the Gemini character. Codex uses the gallery's main GPT dragon character. These are display choices, not additional quota providers.
 
@@ -34,6 +34,7 @@ The SwiftPM `QuotaBar_QuotaBar.bundle` is copied into the app's resources by `sc
 swift test --skip 'live'
 QUOTABAR_PET_PREVIEW_DIR="$PWD/dist/pet-preview" swift test --filter desktopPetWindows
 ./scripts/build-app.sh
+"dist/Quota Bar.app/Contents/MacOS/QuotaBar" --verify-pet-resources
 ```
 
 The window test uses isolated preferences and mock snapshots without starting collectors. It verifies independent windows, closing, and focus preservation. The optional environment variable exports UI captures for visual inspection.

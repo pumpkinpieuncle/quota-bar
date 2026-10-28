@@ -50,6 +50,7 @@ mkdir -p "$release_dir"
 
 app_name="Quota Bar.app"
 app_path="$project_dir/dist/$app_name"
+"$app_path/Contents/MacOS/QuotaBar" --verify-pet-resources
 zip_path="$release_dir/Quota-Bar-$version.zip"
 dmg_path="$release_dir/Quota-Bar-$version.dmg"
 volname="Quota Bar $version"

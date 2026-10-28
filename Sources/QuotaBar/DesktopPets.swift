@@ -42,6 +42,8 @@ final class DesktopPetController: NSObject, NSWindowDelegate {
     private let model: AppModel
     private var panels: [ProviderID: NSPanel] = [:]
     private var speechPanels: [ProviderID: NSPanel] = [:]
+    private var localClickMonitor: Any?
+    private var globalClickMonitor: Any?
     private var observations = Set<AnyCancellable>()
     private var isRestoringPosition = false
     static let windowSize = CGSize(width: 200, height: 222)
@@ -72,7 +74,7 @@ final class DesktopPetController: NSObject, NSWindowDelegate {
 
     private func synchronize(_ enabled: Set<ProviderID>) {
         for provider in Array(panels.keys) where !enabled.contains(provider) {
-            speechPanels.removeValue(forKey: provider)?.close()
+            setSpeechVisible(false, for: provider)
             panels.removeValue(forKey: provider)?.close()
         }
         for provider in ProviderID.allCases where enabled.contains(provider) && panels[provider] == nil {
@@ -99,8 +101,8 @@ final class DesktopPetController: NSObject, NSWindowDelegate {
         panel.appearance = NSAppearance(named: .darkAqua)
         panel.delegate = self
 
-        let view = NSHostingView(rootView: DesktopPetView(provider: provider, model: model) { [weak self] hovering in
-            self?.setSpeechVisible(hovering, for: provider)
+        let view = NSHostingView(rootView: DesktopPetView(provider: provider, model: model) { [weak self] in
+            self?.toggleSpeech(for: provider)
         })
         view.safeAreaRegions = []
         view.sizingOptions = []
@@ -151,9 +153,39 @@ final class DesktopPetController: NSObject, NSWindowDelegate {
         positionSpeechPanel(for: provider)
     }
 
+    func toggleSpeech(for provider: ProviderID) {
+        let shouldShow = speechPanels[provider] == nil
+        for openProvider in Array(speechPanels.keys) {
+            setSpeechVisible(false, for: openProvider)
+        }
+        if shouldShow { setSpeechVisible(true, for: provider) }
+    }
+
+    func dismissSpeechIfOutside(at point: CGPoint) {
+        guard !speechPanels.keys.contains(where: { panels[$0]?.frame.contains(point) == true }) else { return }
+        for provider in Array(speechPanels.keys) { setSpeechVisible(false, for: provider) }
+    }
+
+    private func monitorOutsideClicks() {
+        guard localClickMonitor == nil else { return }
+        localClickMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+            MainActor.assumeIsolated { self?.dismissSpeechIfOutside(at: NSEvent.mouseLocation) }
+            return event
+        }
+        globalClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+            MainActor.assumeIsolated { self?.dismissSpeechIfOutside(at: NSEvent.mouseLocation) }
+        }
+    }
+
     func setSpeechVisible(_ visible: Bool, for provider: ProviderID) {
         guard visible, panels[provider] != nil else {
             speechPanels.removeValue(forKey: provider)?.close()
+            if speechPanels.isEmpty {
+                if let monitor = localClickMonitor { NSEvent.removeMonitor(monitor) }
+                if let monitor = globalClickMonitor { NSEvent.removeMonitor(monitor) }
+                localClickMonitor = nil
+                globalClickMonitor = nil
+            }
             return
         }
         if speechPanels[provider] == nil {
@@ -177,6 +209,7 @@ final class DesktopPetController: NSObject, NSWindowDelegate {
         }
         positionSpeechPanel(for: provider)
         speechPanels[provider]?.orderFrontRegardless()
+        monitorOutsideClicks()
     }
 
     private func refreshSpeechPanels() {
@@ -204,7 +237,7 @@ private struct DesktopPetView: View {
     let provider: ProviderID
     @ObservedObject var model: AppModel
     @ObservedObject private var preferences: AppPreferences
-    let onHoverChanged: (Bool) -> Void
+    let onClick: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hovering = false
     @State private var artwork: PetArtwork?
@@ -212,10 +245,10 @@ private struct DesktopPetView: View {
     @State private var interactionSerial = 0
     @State private var requestedAnimation: PetAnimation?
 
-    init(provider: ProviderID, model: AppModel, onHoverChanged: @escaping (Bool) -> Void) {
+    init(provider: ProviderID, model: AppModel, onClick: @escaping () -> Void) {
         self.provider = provider
         self.model = model
-        self.onHoverChanged = onHoverChanged
+        self.onClick = onClick
         _preferences = ObservedObject(wrappedValue: model.preferences)
     }
 
@@ -238,9 +271,12 @@ private struct DesktopPetView: View {
                 }
                 .frame(width: 200, height: 180)
 
-                PetDragSurface { request(.greeting) }
+                PetDragSurface {
+                    request(.greeting)
+                    onClick()
+                }
                     .frame(width: 170, height: 180)
-                    .accessibilityLabel(preferences.language.text("点击打招呼，拖动移动桌宠", "Click to wave, drag to move"))
+                    .accessibilityLabel(preferences.language.text("点击查看额度，拖动移动桌宠", "Click for quota, drag to move"))
 
                 HStack {
                     if isWaiting {
@@ -277,11 +313,7 @@ private struct DesktopPetView: View {
             Spacer(minLength: 0)
         }
         .frame(width: 200, height: 222)
-        .onHover {
-            hovering = $0
-            onHoverChanged($0)
-        }
-        .onDisappear { onHoverChanged(false) }
+        .onHover { hovering = $0 }
         .contextMenu {
             ForEach([PetAnimation.idle, .working] + PetAnimation.leisure(for: provider), id: \.rawValue) { animation in
                 Button(animation.label(language: preferences.language)) { request(animation) }

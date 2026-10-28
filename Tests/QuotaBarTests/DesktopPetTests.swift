@@ -111,6 +111,17 @@ import Testing
         try await Task.sleep(for: .milliseconds(100))
     }
 
+    controller.toggleSpeech(for: .claude)
+    #expect(!NSApp.windows.contains { $0.title.hasSuffix(" · Quota details") && $0.isVisible })
+    controller.toggleSpeech(for: .claude)
+    controller.dismissSpeechIfOutside(at: CGPoint(x: claudeWindow.frame.midX, y: claudeWindow.frame.midY))
+    #expect(NSApp.windows.contains { $0.title == "Claude · Quota details" && $0.isVisible })
+    controller.toggleSpeech(for: .deepseek)
+    #expect(NSApp.windows.filter { $0.title.hasSuffix(" · Quota details") && $0.isVisible }.map(\.title) == ["DeepSeek · Quota details"])
+    controller.dismissSpeechIfOutside(at: CGPoint(x: -100000, y: -100000))
+    #expect(!NSApp.windows.contains { $0.title.hasSuffix(" · Quota details") && $0.isVisible })
+    controller.toggleSpeech(for: .claude)
+
     preferences.toggleDesktopPet(.deepseek)
     try await Task.sleep(for: .milliseconds(100))
     #expect(petWindows().map(\.title) == ["Claude · Quota Bar"])
@@ -118,6 +129,7 @@ import Testing
     try await Task.sleep(for: .milliseconds(100))
     #expect(petWindows().isEmpty)
     #expect(!bubble.isVisible)
+    #expect(!NSApp.windows.contains { $0.title.hasSuffix(" · Quota details") && $0.isVisible })
     withExtendedLifetime(controller) {}
 }
 
