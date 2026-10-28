@@ -1,0 +1,118 @@
+{
+  "generatedWith": "Built-in image_gen tool",
+  "generatedOn": "2026-10-28",
+  "styleReference": {
+    "project": "PC2005-cloud/dsh-pet",
+    "version": "0.3.8",
+    "file": "assets/webm/待机呼吸休闲.webm",
+    "frame": 0
+  },
+  "characterReferences": {
+    "gallery": "https://genderswapai.com/zh-CN/ai-gijinka/gallery",
+    "artist": "ZipZipPipe",
+    "codex": "https://genderswapai.com/images/ai-gijinka/gpt.webp",
+    "claude": "https://genderswapai.com/images/ai-gijinka/claude.webp",
+    "kimi": "https://genderswapai.com/images/ai-gijinka/kimi.webp",
+    "grok": "https://genderswapai.com/images/ai-gijinka/grok.webp",
+    "gemini": "https://genderswapai.com/images/ai-gijinka/gemini.webp"
+  },
+  "prompts": {
+    "claude": "Create ONE desktop pet sprite, with a genuinely transparent alpha background.\nReference 1 is the EXACT intended art style and body proportions: the little blue-haired DeepSeek desktop pet in the center of that image. Reference 2 supplies ONLY Claude's character identity.\nDraw Claude in the SAME flat hand-drawn 2D chibi game-sprite style as reference 1: approximately 2 heads tall, extremely short compact body, round head, tiny feet and mitten-like hands, thick crisp dark outlines, large simple expressive eyes, flat cel-shaded color blocks with at most 2 shadow tones, short round silhouette that reads at 140px. This must look like a sibling desktop pet from the SAME sprite pack as reference 1.\nClaude identity: long pumpkin-orange hair simplified into compact rounded locks, orange flower hairclip, warm brown eyes, ivory/navy dress with orange center panel and one orange flower brooch, tiny brown book. Preserve these recognizable signature features. Full body front view, small calm smile, relaxed standing idle pose, all hair and accessories inside image. One subject, centered, filling about 80% of square canvas height, 10% padding. No text, logos, scenery, floor or pedestal.\nDo NOT copy the adult anatomy or long slender body from reference 2. Do NOT make a glossy 3D doll, a painterly illustration, a detailed anime portrait, watercolor hair, giant sparkly irises, or thin filigree costume detail. Keep the compact thick-outlined 2D sprite aesthetic of reference 1.",
+    "codex": "Create ONE desktop pet sprite, with a genuinely transparent alpha background.\nReference 1 is the EXACT intended art style and body proportions: the little blue-haired DeepSeek desktop pet in the center of that image. Reference 2 supplies ONLY the model character's identity.\nDraw this model character in the SAME flat hand-drawn 2D chibi game-sprite style as reference 1: approximately 2 heads tall, extremely short compact body, round head, tiny feet and mitten-like hands, thick crisp dark outlines, large simple expressive eyes, flat cel-shaded color blocks with at most 2 shadow tones, short round silhouette that reads at 140px. This must look like a sibling desktop pet from the SAME sprite pack as reference 1.\nGPT/Codex identity: silver-white hair, white dragon horns, purple eyes, small white dragon wings and scaled tail, white Chinese-style dress with lavender trims and a simple knot-shaped hair ornament. Use the main GPT dragon-girl design in reference 2, not a nightgown/slipper variant. Keep the dress modest and simplified to a tiny chibi body. Preserve these recognizable signature features. Full body front view, small calm smile, relaxed standing idle pose, all hair and accessories inside image. One subject, centered, filling about 80% of square canvas height, 10% padding. No text, logos, scenery, floor or pedestal.\nDo NOT copy the adult anatomy or long slender body from reference 2. Do NOT make a glossy 3D doll, a painterly illustration, a detailed anime portrait, watercolor hair, giant sparkly irises, or thin filigree costume detail. Keep the compact thick-outlined 2D sprite aesthetic of reference 1.",
+    "kimi": "Create ONE desktop pet sprite, with a genuinely transparent alpha background.\nReference 1 is the EXACT intended art style and body proportions: the little blue-haired DeepSeek desktop pet in the center of that image. Reference 2 supplies ONLY the model character's identity.\nDraw this model character in the SAME flat hand-drawn 2D chibi game-sprite style as reference 1: approximately 2 heads tall, extremely short compact body, round head, tiny feet and mitten-like hands, thick crisp dark outlines, large simple expressive eyes, flat cel-shaded color blocks with at most 2 shadow tones, short round silhouette that reads at 140px. This must look like a sibling desktop pet from the SAME sprite pack as reference 1.\nKimi identity: silver-white long hair simplified into compact locks, lavender eyes, navy and white dress with starry cape, crescent moon and black bow hair ornament, small rainbow ribbon. Tiny short body and feet. Preserve these recognizable signature features. Full body front view, small calm smile, relaxed standing idle pose, all hair and accessories inside image. One subject, centered, filling about 80% of square canvas height, 10% padding. No text, logos, scenery, floor or pedestal.\nDo NOT copy the adult anatomy or long slender body from reference 2. Do NOT make a glossy 3D doll, a painterly illustration, a detailed anime portrait, watercolor hair, giant sparkly irises, or thin filigree costume detail. Keep the compact thick-outlined 2D sprite aesthetic of reference 1.",
+    "grok": "Create ONE desktop pet sprite, with a genuinely transparent alpha background.\nReference 1 is the EXACT intended art style and body proportions: the little blue-haired DeepSeek desktop pet in the center of that image. Reference 2 supplies ONLY the model character's identity.\nDraw this model character in the SAME flat hand-drawn 2D chibi game-sprite style as reference 1: approximately 2 heads tall, extremely short compact body, round head, tiny feet and mitten-like hands, thick crisp dark outlines, large simple expressive eyes, flat cel-shaded color blocks with at most 2 shadow tones, short round silhouette that reads at 140px. This must look like a sibling desktop pet from the SAME sprite pack as reference 1.\nGrok identity: honey blonde twin ponytails, blue eyes, black bows and tiny gold crown, black and burgundy modest dress with gold accents, tiny bat wing hair accessories, playful grin. Omit the huge axe for a compact silhouette. Preserve these recognizable signature features. Full body front view, small calm smile, relaxed standing idle pose, all hair and accessories inside image. One subject, centered, filling about 80% of square canvas height, 10% padding. No text, logos, scenery, floor or pedestal.\nDo NOT copy the adult anatomy or long slender body from reference 2. Do NOT make a glossy 3D doll, a painterly illustration, a detailed anime portrait, watercolor hair, giant sparkly irises, or thin filigree costume detail. Keep the compact thick-outlined 2D sprite aesthetic of reference 1.",
+    "gemini": "Create ONE desktop pet sprite, with a genuinely transparent alpha background.\nReference 1 is the EXACT intended art style and body proportions: the little blue-haired DeepSeek desktop pet in the center of that image. Reference 2 supplies ONLY the model character's identity.\nDraw this model character in the SAME flat hand-drawn 2D chibi game-sprite style as reference 1: approximately 2 heads tall, extremely short compact body, round head, tiny feet and mitten-like hands, thick crisp dark outlines, large simple expressive eyes, flat cel-shaded color blocks with at most 2 shadow tones, short round silhouette that reads at 140px. This must look like a sibling desktop pet from the SAME sprite pack as reference 1.\nGemini identity: blue-purple long hair, cat ears, fluffy cat tail, one pink eye and one gold eye, navy violet and white dress with star accents, iridescent four-point star hairclip. Cheerful playful expression. Modest outfit simplified into a tiny chibi body. Preserve these recognizable signature features. Full body front view, small calm smile, relaxed standing idle pose, all hair and accessories inside image. One subject, centered, filling about 80% of square canvas height, 10% padding. No text, logos, scenery, floor or pedestal.\nDo NOT copy the adult anatomy or long slender body from reference 2. Do NOT make a glossy 3D doll, a painterly illustration, a detailed anime portrait, watercolor hair, giant sparkly irises, or thin filigree costume detail. Keep the compact thick-outlined 2D sprite aesthetic of reference 1."
+  },
+  "animations": {
+    "claude": {
+      "coreSource": "exec-9feb3632-9371-420c-b423-f653bbebaf8e.png",
+      "extraSource": "exec-54caf85c-3091-4827-8e84-46ad9138d1a6.png",
+      "tileSize": 256,
+      "columns": 4,
+      "rows": 4,
+      "actions": [
+        "idle",
+        "greeting",
+        "thinking",
+        "working",
+        "stretching",
+        "snack",
+        "dancing",
+        "sleeping"
+      ],
+      "normalization": "Shared scale across both sheets; bottom-center anchor; alpha-aware gutters."
+    },
+    "codex": {
+      "coreSource": "exec-cd613acf-7023-4b28-8f0c-9069ae6efe71.png",
+      "extraSource": "exec-1af5140e-3000-44ab-a4a5-0b7e048e08d0.png",
+      "tileSize": 256,
+      "columns": 4,
+      "rows": 4,
+      "actions": [
+        "idle",
+        "greeting",
+        "thinking",
+        "working",
+        "stretching",
+        "snack",
+        "dancing",
+        "sleeping"
+      ],
+      "normalization": "Shared scale across both sheets; bottom-center anchor; alpha-aware gutters."
+    },
+    "kimi": {
+      "coreSource": "exec-5cba0c3d-ad07-4bc5-96a5-e330d029a230.png",
+      "extraSource": "exec-7e8b77a2-6e58-4a58-bddf-2a439876870c.png",
+      "tileSize": 256,
+      "columns": 4,
+      "rows": 4,
+      "actions": [
+        "idle",
+        "greeting",
+        "thinking",
+        "working",
+        "stretching",
+        "snack",
+        "dancing",
+        "sleeping"
+      ],
+      "normalization": "Shared scale across both sheets; bottom-center anchor; alpha-aware gutters."
+    },
+    "grok": {
+      "coreSource": "exec-fd4aba75-509f-401c-8872-3d10680864e7.png",
+      "extraSource": "exec-643359eb-3aa0-469d-bcd3-4d313ccfbade.png",
+      "tileSize": 256,
+      "columns": 4,
+      "rows": 4,
+      "actions": [
+        "idle",
+        "greeting",
+        "thinking",
+        "working",
+        "stretching",
+        "snack",
+        "dancing",
+        "sleeping"
+      ],
+      "normalization": "Shared scale across both sheets; bottom-center anchor; alpha-aware gutters."
+    },
+    "gemini": {
+      "coreSource": "exec-25c918e3-61a8-4286-ab02-005f948be8ad.png",
+      "extraSource": "exec-36e5e4ca-d02e-4548-b675-dfbb9359c649.png",
+      "tileSize": 256,
+      "columns": 4,
+      "rows": 4,
+      "actions": [
+        "idle",
+        "greeting",
+        "thinking",
+        "working",
+        "stretching",
+        "snack",
+        "dancing",
+        "sleeping"
+      ],
+      "normalization": "Shared scale across both sheets; bottom-center anchor; alpha-aware gutters."
+    }
+  }
+}

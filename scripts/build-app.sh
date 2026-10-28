@@ -17,6 +17,7 @@ cp ".build/release/QuotaBar" "$contents_dir/MacOS/QuotaBar"
 cp ".build/release/QuotaBarCapture" "$contents_dir/Helpers/QuotaBarCapture"
 cp "Resources/Info.plist" "$contents_dir/Info.plist"
 cp "Resources/QuotaBar.icns" "$contents_dir/Resources/QuotaBar.icns"
+cp -R ".build/release/QuotaBar_QuotaBar.bundle" "$contents_dir/Resources/QuotaBar_QuotaBar.bundle"
 
 sign_identity="${QUOTABAR_SIGN_IDENTITY:-}"
 if [[ -z "$sign_identity" ]]; then

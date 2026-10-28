@@ -13,7 +13,7 @@ final class AppModel: ObservableObject {
     @Published var deepSeekKeyConfigured = DeepSeekCredentialStore.load() != nil
     @Published var updateState: UpdateState = .idle
 
-    let preferences = AppPreferences()
+    let preferences: AppPreferences
     let hud = HUDBridge()
 
     private let codexClient = CodexUsageClient()
@@ -23,6 +23,10 @@ final class AppModel: ObservableObject {
     private let grokClient = GrokUsageClient()
     private var scheduledRefresh: Task<Void, Never>?
     private var latestRelease: LatestRelease?
+
+    init(preferences: AppPreferences = AppPreferences()) {
+        self.preferences = preferences
+    }
 
     var language: AppLanguage { preferences.language }
 

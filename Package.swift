@@ -22,7 +22,8 @@ let package = Package(
         .executableTarget(
             name: "QuotaBar",
             dependencies: ["QuotaBarHUD"],
-            path: "Sources/QuotaBar"
+            path: "Sources/QuotaBar",
+            resources: [.copy("Resources/Pets")]
         ),
         .executableTarget(
             name: "QuotaBarCapture",

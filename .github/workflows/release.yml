@@ -21,8 +21,8 @@ jobs:
           app_version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)
           test "v$app_version" = "$GITHUB_REF_NAME"
 
-      - name: Test
-        run: swift test
+      - name: Test without local account credentials
+        run: swift test --skip 'live'
 
       - name: Detect signing and notarization secrets
         env:

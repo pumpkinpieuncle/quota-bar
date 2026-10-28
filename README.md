@@ -8,6 +8,7 @@ A lightweight native macOS floating panel for Codex, Claude Code, Kimi Code, Ant
 
 ## 功能 / Features
 
+- **模型桌宠**：每个模型都有独立的爪印按钮，可同时打开多只，支持拖动并记住位置。DeepSeek 有 14 组原版动作，其余每只 8 组；空闲自动轮换、点击挥手、右键选动作，悬停弹出真实额度、余额、重置时间和工作状态气泡，不额外调用模型。详见 [`docs/desktop-pets.md`](docs/desktop-pets.md)。
 - **内置自动更新**：启动后静默检查 GitHub Releases 最新版本；设置面板与右键菜单新增「检查更新」/「更新到 vX.X.X…」，一键下载并自动重启升级，无需重新手动下载 DMG。
 - **Antigravity 真实模型配额**：通过本地 Language Server 实时呈现 Gemini Models（Flash / Pro）与 Claude/GPT 模型的 5 小时滑动窗口与 7 天周额度，提供精确到分秒的重置倒计时与本地持久化缓存。
 - **Codex 额度与余额**：兼容最新版 ChatGPT.app 与官方独立 CLI，支持 Pro/Prolite 等账户的 7 天/5 小时额度及 Credit 余额展示。

@@ -1,5 +1,14 @@
 # Changelog / 更新日志
 
+# Quota Bar 1.5.0
+
+- 新增六个模型的独立桌宠开关，支持多只同时显示、拖动、位置与显示状态持久化。
+- DeepSeek 接入 14 组 DSH 原版动画，其余角色各有 32 帧、8 组动作；支持空闲轮换、点击挥手和右键选动作。
+- 悬停气泡展示真实额度、余额、重置时间和工作状态，复用主面板数据，不额外调用模型。
+- 气泡自动避开屏幕边缘，不抢键盘焦点；修复气泡高度导致的内容裁切，支持减少动态效果。
+- 发布 CI 跳过依赖本机账号的 live 测试；新增桌宠资源、数据与窗口交互验证。
+- Added independent animated desktop pets for all providers, with persistent positions, click and context-menu actions, and hover bubbles showing existing quota and activity data. See [release notes](RELEASE_NOTES_1.5.0.md).
+
 # Quota Bar 1.4.2
 
 ## 新增与优化 / New Features & Improvements

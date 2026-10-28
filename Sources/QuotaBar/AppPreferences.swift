@@ -58,6 +58,12 @@ final class AppPreferences: ObservableObject {
         }
     }
 
+    @Published var desktopPets: Set<ProviderID> {
+        didSet {
+            defaults.set(desktopPets.map(\.rawValue).sorted(), forKey: Keys.desktopPets)
+        }
+    }
+
     /// Percentage at or below which a provider is treated as running low. Zero
     /// turns the warning off.
     @Published var lowQuotaThreshold: Int {
@@ -90,6 +96,7 @@ final class AppPreferences: ObservableObject {
         static let providerOrder = "providerOrder"
         static let hiddenProviders = "hiddenProviders"
         static let pausedProviders = "pausedProviders"
+        static let desktopPets = "desktopPets"
         static let knownProviders = "knownProviders"
         static let lowQuotaThreshold = "lowQuotaThreshold"
         static let hudEnabled = "hudEnabled"
@@ -189,6 +196,11 @@ final class AppPreferences: ObservableObject {
                 .compactMap(ProviderID.init(rawValue:))
         )
 
+        desktopPets = Set(
+            (defaults.stringArray(forKey: Keys.desktopPets) ?? [])
+                .compactMap(ProviderID.init(rawValue:))
+        )
+
         lowQuotaThreshold = defaults.object(forKey: Keys.lowQuotaThreshold) == nil
             ? 10
             : min(max(defaults.integer(forKey: Keys.lowQuotaThreshold), 0), 100)
@@ -202,6 +214,24 @@ final class AppPreferences: ObservableObject {
     }
 
     // MARK: - Panel geometry
+
+    func toggleDesktopPet(_ provider: ProviderID) {
+        if desktopPets.contains(provider) {
+            desktopPets.remove(provider)
+        } else {
+            desktopPets.insert(provider)
+        }
+    }
+
+    func savedPetOrigin(for provider: ProviderID) -> CGPoint? {
+        guard let values = defaults.array(forKey: "desktopPetOrigin.\(provider.rawValue)") as? [Double],
+              values.count == 2, values.allSatisfy(\.isFinite) else { return nil }
+        return CGPoint(x: values[0], y: values[1])
+    }
+
+    func setPetOrigin(_ origin: CGPoint, for provider: ProviderID) {
+        defaults.set([origin.x, origin.y], forKey: "desktopPetOrigin.\(provider.rawValue)")
+    }
 
     /// Panel geometry is written on every drag, so it deliberately lives
     /// outside `@Published` state: republishing here would redraw the whole

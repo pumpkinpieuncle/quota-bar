@@ -183,6 +183,7 @@ final class MenuBarMarqueeView: NSView {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelegate {
     private let model = AppModel()
+    private var desktopPets: DesktopPetController?
     private var panel: FloatingPanel?
     /// Set while the app itself is moving the panel so programmatic layout
     /// changes are not mistaken for the user repositioning it.
@@ -217,6 +218,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         NSApp.setActivationPolicy(.accessory)
         makeMainMenu()
         makePanel()
+        desktopPets = DesktopPetController(model: model)
         makeStatusItem()
         registerShowPanelHotKey()
         model.start()

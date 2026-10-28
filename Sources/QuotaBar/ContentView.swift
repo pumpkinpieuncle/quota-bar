@@ -221,6 +221,7 @@ struct ContentView: View {
                             language: preferences.language,
                             quotaWindow: preferences.quotaWindow,
                             lowQuotaThreshold: preferences.lowQuotaThreshold,
+                            preferences: preferences,
                             installClaudeCollector: model.installClaudeCollector,
                             manageProviders: {
                                 settingsTab = .providers
@@ -332,6 +333,7 @@ struct ContentView: View {
             Circle()
                 .fill(compactActivityColor(snapshot.activity))
                 .frame(width: 5, height: 5)
+            PetToggleButton(provider: snapshot.id, preferences: preferences, compact: true)
         }
         .padding(.horizontal, 9)
         .frame(maxWidth: .infinity, minHeight: 34, maxHeight: 44)
@@ -432,6 +434,7 @@ private struct ProviderCard: View {
     let language: AppLanguage
     let quotaWindow: QuotaWindowPreference
     let lowQuotaThreshold: Int
+    @ObservedObject var preferences: AppPreferences
     let installClaudeCollector: () -> Void
     let manageProviders: () -> Void
 
@@ -496,17 +499,18 @@ private struct ProviderCard: View {
 
                 Spacer(minLength: 2)
 
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(activityColor)
-                        .frame(width: 5, height: 5)
-                    Text(snapshot.activity.label(language: language))
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.52))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.72)
-                }
-                .layoutPriority(0)
+                PetToggleButton(provider: snapshot.id, preferences: preferences)
+            }
+
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(activityColor)
+                    .frame(width: 5, height: 5)
+                Text(snapshot.activity.label(language: language))
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.52))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
             }
 
             if showsBalance, let balance = snapshot.balances.first {
@@ -1435,6 +1439,7 @@ private struct ProviderManagerContent: View {
                 .font(.system(size: 10.5, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white.opacity(isHidden ? 0.35 : 0.82))
             Spacer(minLength: 2)
+            PetToggleButton(provider: provider, preferences: preferences)
             Button {
                 let willHide = !isHidden
                 preferences.setProvider(provider, hidden: willHide)
