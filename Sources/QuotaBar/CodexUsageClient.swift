@@ -47,7 +47,10 @@ actor CodexUsageClient {
     }
 
     private func shouldSyncResetCards() -> Bool {
-        guard let lastSync = lastResetCardSyncDate, cachedResetCards != nil else {
+        guard let lastSync = lastResetCardSyncDate, let cached = cachedResetCards else {
+            return true
+        }
+        if cached.availableCount > 0 && cached.items.isEmpty {
             return true
         }
         return !Calendar.current.isDateInToday(lastSync) || Date().timeIntervalSince(lastSync) >= 86_400
@@ -78,23 +81,20 @@ actor CodexUsageClient {
             try Self.readAccountRateLimits()
         }.value
 
-        // Daily sync for reset cards (synced at most once per calendar day / 24h)
-        if shouldSyncResetCards(),
-           let envelope = try? JSONSerialization.jsonObject(with: response) as? [String: Any],
-           let newCards = Self.parseResetCredits(envelope, syncDate: Date()) {
-            self.cachedResetCards = newCards
-            self.lastResetCardSyncDate = newCards.lastSyncDate
-            if let encoded = try? JSONEncoder().encode(newCards) {
-                UserDefaults.standard.set(encoded, forKey: "codex_reset_cards_cache")
-            }
-        }
-
         let result = try Self.parseResponse(
             response,
             fetchedAt: Date(),
             language: language,
             resetCards: cachedResetCards
         )
+
+        if let freshCards = result.resetCards {
+            self.cachedResetCards = freshCards
+            self.lastResetCardSyncDate = freshCards.lastSyncDate
+            if let encoded = try? JSONEncoder().encode(freshCards) {
+                UserDefaults.standard.set(encoded, forKey: "codex_reset_cards_cache")
+            }
+        }
         lastRemoteFetch = result.fetchedAt
         lastResult = result
         lastResponse = response
@@ -174,8 +174,10 @@ actor CodexUsageClient {
         }
 
         let finalResetCards: ResetCardInfo? = {
-            if let resetCards { return resetCards }
-            return parseResetCredits(envelope, syncDate: fetchedAt)
+            if let fresh = parseResetCredits(envelope, syncDate: fetchedAt) {
+                return fresh
+            }
+            return resetCards
         }()
 
         return UsageResult(

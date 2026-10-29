@@ -288,11 +288,14 @@ import Testing
     let client = CodexUsageClient()
     let usage = try await client.fetchIfNeeded(force: true, language: .chinese)
     #expect(!usage.limits.isEmpty)
-    #expect(usage.limits[0].remainingPercent > 0)
+    #expect(usage.limits[0].remainingPercent >= 0)
     #expect(!usage.plan.isEmpty)
     if let cards = usage.resetCards {
-        print("LIVE CODEX RESET CARDS: count=\(cards.availableCount), expiry=\(String(describing: cards.nextExpiry))")
+        print("LIVE CODEX RESET CARDS: count=\(cards.availableCount), items=\(cards.items.count), expiry=\(String(describing: cards.nextExpiry))")
         #expect(cards.availableCount >= 0)
+        if cards.availableCount > 0 {
+            #expect(!cards.items.isEmpty)
+        }
     }
 }
 

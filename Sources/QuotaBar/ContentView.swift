@@ -325,6 +325,26 @@ struct ContentView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Spacer(minLength: 2)
+            if let resetCards = snapshot.resetCards, resetCards.availableCount > 0 {
+                HStack(spacing: 2.5) {
+                    Image(systemName: "ticket.fill")
+                        .font(.system(size: 8))
+                    Text("\(resetCards.availableCount)")
+                        .font(.system(size: 9.5, weight: .bold, design: .rounded))
+                }
+                .foregroundStyle(Color(red: 0.28, green: 0.82, blue: 0.72))
+                .padding(.horizontal, 4.5)
+                .padding(.vertical, 2)
+                .background(
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(Color(red: 0.28, green: 0.82, blue: 0.72).opacity(0.14))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .stroke(Color(red: 0.28, green: 0.82, blue: 0.72).opacity(0.28), lineWidth: 0.5)
+                        )
+                )
+                .help(resetCards.fullTooltip(language: preferences.language))
+            }
             Text(quota)
                 .font(.system(size: 13, weight: .bold, design: .rounded))
                 .foregroundStyle(isLow ? Color(red: 1, green: 0.45, blue: 0.42) : .white.opacity(0.94))
@@ -350,11 +370,20 @@ struct ContentView: View {
                         )
                 }
         )
-        .help(
-            "\(snapshot.id.title) · "
-                + snapshot.activity.label(language: preferences.language)
-                + " · " + snapshot.detail
-        )
+        .help(compactTooltip(for: snapshot))
+    }
+
+    private func compactTooltip(for snapshot: ProviderSnapshot) -> String {
+        var text = "\(snapshot.id.title) · "
+            + snapshot.activity.label(language: preferences.language)
+            + " · " + snapshot.detail
+        if let resetCards = snapshot.resetCards, resetCards.availableCount > 0 {
+            text += "\n\n" + resetCards.fullTooltip(language: preferences.language)
+        }
+        if let prediction = snapshot.resetPrediction {
+            text += "\n\n" + prediction.fullTooltip(language: preferences.language)
+        }
+        return text
     }
 
     private func compactActivityColor(_ activity: ActivityState) -> Color {
@@ -586,18 +615,14 @@ private struct ProviderCard: View {
     @ViewBuilder
     private func resetCardsBadge(_ cards: ResetCardInfo) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            ForEach(Array(cards.items.enumerated()), id: \.element.id) { index, item in
+            if cards.items.isEmpty {
                 HStack(spacing: 4) {
                     Image(systemName: "ticket.fill")
                         .font(.system(size: 7.5))
                         .foregroundStyle(Color(red: 0.28, green: 0.82, blue: 0.72))
-                    Text(language.text("重置卡 #\(index + 1)", "Pass #\(index + 1)"))
+                    Text(language.text("重置卡 \(cards.availableCount) 张可用", "\(cards.availableCount) reset passes"))
                         .font(.system(size: 9, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white.opacity(0.85))
-                    Text("· " + item.localizedExpiryText(language: language))
-                        .font(.system(size: 8.5, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.48))
-                        .lineLimit(1)
                 }
                 .padding(.horizontal, 5)
                 .padding(.vertical, 2.5)
@@ -609,7 +634,33 @@ private struct ProviderCard: View {
                                 .stroke(Color.white.opacity(0.09), lineWidth: 0.5)
                         )
                 )
-                .help(item.tooltipText(language: language))
+                .help(cards.fullTooltip(language: language))
+            } else {
+                ForEach(Array(cards.items.enumerated()), id: \.element.id) { index, item in
+                    HStack(spacing: 4) {
+                        Image(systemName: "ticket.fill")
+                            .font(.system(size: 7.5))
+                            .foregroundStyle(Color(red: 0.28, green: 0.82, blue: 0.72))
+                        Text(language.text("重置卡 #\(index + 1)", "Pass #\(index + 1)"))
+                            .font(.system(size: 9, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.85))
+                        Text("· " + item.localizedExpiryText(language: language))
+                            .font(.system(size: 8.5, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.48))
+                            .lineLimit(1)
+                    }
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2.5)
+                    .background(
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .fill(Color.white.opacity(0.06))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                    .stroke(Color.white.opacity(0.09), lineWidth: 0.5)
+                            )
+                    )
+                    .help(item.tooltipText(language: language))
+                }
             }
         }
     }
