@@ -47,7 +47,7 @@ A lightweight native macOS floating panel for Codex, Claude Code, Kimi Code, Ant
 | 服务 | 额度来源 | 默认显示 |
 | --- | --- | --- |
 | Codex | 官方 app-server `account/rateLimits/read` | ✅ |
-| Claude | Claude Desktop 本地用量历史 / Claude Code status line | ✅ |
+| Claude | 官方 `/api/oauth/usage`（借用 Claude Code 登录）/ Claude Desktop 本地用量历史 / Claude Code status line | ✅ |
 | Kimi | Kimi Code 官方 `/usages` | ✅ |
 | DeepSeek | 官方 `GET /user/balance`（需 API Key） | 需手动开启 |
 | Antigravity | 本地 Language Server gRPC/HTTPS，实时读取 5 小时与周额度（支持 Gemini、Claude、GPT 模型） | 需手动开启 |
@@ -60,7 +60,7 @@ DeepSeek、Antigravity、Grok 默认隐藏，在浮窗的“模型管理”里�
 Quota Bar **不会为了显示状态而消耗 Codex、Claude 或 Kimi 的模型额度**：
 
 - Codex：通过官方 Codex app-server 的 `account/rateLimits/read` 读取当前登录账号的额度，并读取本地事件和任务进程判断工作状态。该接口不会生成模型回复。
-- Claude Desktop：只读它维护的本地 `plan-usage-history.json`；Claude Code 使用官方 status line 与 **command hooks**。不会使用 prompt/agent hooks，也不会给 Claude 发送测试提示词。
+- Claude：订阅额度通过 Claude Code `/usage` 使用的官方 `/api/oauth/usage` 端点读取，借用 Claude Code 保存在钥匙串中的登录（只读，不刷新令牌），不是模型生成请求；同时读取 Claude Desktop 的本地 `plan-usage-history.json`，Claude Code 使用官方 status line 与 **command hooks**。不会使用 prompt/agent hooks，也不会给 Claude 发送测试提示词。
 - Kimi：读取本地会话事件；额度只通过 Kimi Code 官方 `/usages` HTTP 端点同步，不是模型生成请求。
 - DeepSeek：只请求官方 `GET /user/balance` 账户余额接口，不调用对话或补全模型；隐藏后停止远程同步。
 - Antigravity：通过本地 Antigravity Language Server 服务的 RetrieveUserQuotaSummary 读取真实的 Gemini Models 与 Claude/GPT 模型的 5 小时及周额度，完全本地读取，不发起模型推理调用，不消耗额外 Token。
@@ -111,6 +111,10 @@ open "dist/Quota Bar.app"
 旧的 `/Applications/Quota Bar.app` 会备份到 `dist/Quota Bar.previous.app`。
 
 ## Claude 额度与状态采集
+
+只要 Claude Code 已用 Claude.ai Pro/Max 账号登录（终端运行 `claude` 后 `/login`），Quota Bar 会直接读取官方用量接口，显示 5 小时/7 天订阅额度与准确的重置时间，无论你在终端还是 Claude Desktop 中使用 Claude。Quota Bar 不会刷新 Claude Code 的登录令牌；如果卡片提示登录已过期，在终端打开一次 `claude` 即可。API Key、Bedrock、Vertex 登录没有订阅额度窗口。
+
+接口不可用时会回退到下面的本地来源。
 
 Claude Desktop 安装后，Quota Bar 会自动读取它的本地套餐使用历史并显示 5 小时/7 天剩余额度。Claude Desktop 当前不会把精确重置时间写入本地历史，因此重置时间会在可由历史变化推断或 Claude Code status line 已提供时显示。
 

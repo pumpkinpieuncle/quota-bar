@@ -21,6 +21,7 @@ final class AppModel: ObservableObject {
     private let kimiClient = KimiUsageClient()
     private let antigravityClient = AntigravityUsageClient()
     private let grokClient = GrokUsageClient()
+    private let claudeClient = ClaudeUsageClient()
     private var scheduledRefresh: Task<Void, Never>?
     private var latestRelease: LatestRelease?
 
@@ -196,6 +197,53 @@ final class AppModel: ObservableObject {
                             "Codex 本地快照（账号同步暂不可用）",
                             "Local Codex snapshot (account sync unavailable)"
                         )
+                    }
+                }
+            }
+        }
+
+        if
+            bundle.claude.isInstalled,
+            !preferences.hiddenProviders.contains(.claude),
+            !preferences.pausedProviders.contains(.claude)
+        {
+            do {
+                let usage = try await claudeClient.fetchIfNeeded(force: forceRemote)
+                if
+                    !usage.limits.isEmpty,
+                    let index = merged.firstIndex(where: { $0.id == .claude })
+                {
+                    merged[index].limits = usage.limits
+                    merged[index].lastUpdated = usage.fetchedAt
+                    merged[index].setupAvailable = false
+                    merged[index].detail = usage.plan.isEmpty
+                        ? currentLanguage.text("Claude 订阅额度", "Claude subscription quota")
+                        : currentLanguage.text(
+                            "\(usage.plan) · 订阅额度",
+                            "\(usage.plan) · subscription quota"
+                        )
+                    merged[index].source = currentLanguage.text(
+                        "Claude 官方用量接口（Claude Code 登录）",
+                        "Official Claude usage endpoint (Claude Code sign-in)"
+                    )
+                }
+            } catch {
+                if
+                    let index = merged.firstIndex(where: { $0.id == .claude }),
+                    merged[index].limits.isEmpty
+                {
+                    if
+                        preserveRemoteDataOnFailure,
+                        let previous = previousSnapshots.first(where: {
+                            $0.id == .claude && !$0.limits.isEmpty
+                        })
+                    {
+                        merged[index].limits = previous.limits
+                        merged[index].lastUpdated = previous.lastUpdated
+                        merged[index].detail = previous.detail
+                        merged[index].source = previous.source
+                    } else {
+                        merged[index].detail = claudeError(error, language: currentLanguage)
                     }
                 }
             }
@@ -514,6 +562,29 @@ final class AppModel: ObservableObject {
             forceRemote: true,
             preserveRemoteDataOnFailure: true
         )
+    }
+
+    private func claudeError(_ error: Error, language: AppLanguage) -> String {
+        if let clientError = error as? ClaudeUsageClient.ClientError {
+            switch clientError {
+            case .loggedOut, .rejected:
+                return language.text(
+                    "Claude Code 未登录或登录已失效，请在终端运行 claude 后 /login",
+                    "Claude Code is signed out; run claude in a terminal and /login"
+                )
+            case .expired:
+                return language.text(
+                    "Claude Code 登录已过期，在终端打开一次 claude 即可刷新",
+                    "Claude Code sign-in expired; open claude in a terminal once to refresh it"
+                )
+            case .http(let status):
+                return language.text(
+                    "Claude 用量接口返回 HTTP \(status)",
+                    "Claude usage endpoint returned HTTP \(status)"
+                )
+            }
+        }
+        return language.text("Claude 额度同步失败", "Claude quota sync failed")
     }
 
     private func kimiError(_ error: Error, language: AppLanguage) -> String {

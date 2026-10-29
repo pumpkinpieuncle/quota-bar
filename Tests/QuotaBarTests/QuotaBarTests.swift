@@ -66,6 +66,26 @@ import Testing
     #expect(usage.limits[1].remainingPercent == 75)
 }
 
+@Test func readsClaudeSubscriptionUsage() throws {
+    let payload = """
+    {
+      "five_hour": {"utilization": 37.0, "resets_at": "2026-10-29T14:00:00.123456+00:00"},
+      "seven_day": {"utilization": 12, "resets_at": "2026-11-02T09:00:00Z"},
+      "seven_day_opus": null,
+      "extra_usage": {"is_enabled": false}
+    }
+    """
+    let limits = ClaudeUsageClient.parseUsage(Data(payload.utf8))
+    #expect(limits.count == 2)
+    #expect(limits[0].label == "5 小时")
+    #expect(limits[0].remainingPercent == 63)
+    #expect(limits[0].windowMinutes == 300)
+    #expect(limits[0].resetAt != nil)
+    #expect(limits[1].label == "7 天")
+    #expect(limits[1].remainingPercent == 88)
+    #expect(limits[1].resetAt == ISO8601DateFormatter().date(from: "2026-11-02T09:00:00Z"))
+}
+
 @Test func readsCodexAccountRateLimits() throws {
     let payload = """
     {
@@ -854,4 +874,12 @@ import Testing
     #expect(result.totalUsedPercent != nil)
 }
 
+
+@Test func liveClaudeFetchSucceeds() async throws {
+    let client = ClaudeUsageClient()
+    let result = try await client.fetchIfNeeded(force: true)
+    print("LIVE CLAUDE LIMITS: \(result.limits.map { "\($0.label): \(Int($0.clampedRemaining))% reset=\($0.resetAt.map { "\($0)" } ?? "nil")" }), plan=\(result.plan)")
+    #expect(result.limits.count == 2)
+    #expect(result.limits.allSatisfy { $0.resetAt != nil })
+}
 
