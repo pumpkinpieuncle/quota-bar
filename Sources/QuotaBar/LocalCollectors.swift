@@ -208,6 +208,11 @@ enum LocalCollectors {
         let collectorNeedsRepair = claudeCollectorNeedsRepair()
         let desktopUsage = (try? Data(contentsOf: desktopHistory))
             .flatMap(claudeDesktopUsage)
+            .flatMap { usage in
+                // Only accept recent desktop samples (< 5 hours); older samples reflect
+                // windows that have already reset and would show stale/frozen 0% quota.
+                Date().timeIntervalSince(usage.capturedAt) < 5 * 3_600 ? usage : nil
+            }
 
         let cliObject: [String: Any]? = {
             guard

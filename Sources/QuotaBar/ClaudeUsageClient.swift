@@ -109,7 +109,15 @@ actor ClaudeUsageClient {
     }
 
     private func loadCredential() -> Credential? {
-        // Claude Code stores its sign-in in the Keychain on macOS and falls back
+        // 1. If Claude Desktop or Claude CLI is actively running, borrow its live
+        // in-memory token. Claude Desktop automatically manages fresh OAuth tokens
+        // for its processes without writing them to the Keychain every turn.
+        if let live = liveProcessCredential() {
+            syncTokenToKeychain(token: live.accessToken, subscriptionType: live.subscriptionType)
+            return live
+        }
+
+        // 2. Claude Code stores its sign-in in the Keychain on macOS and falls back
         // to ~/.claude/.credentials.json elsewhere. Reading through
         // /usr/bin/security matches how Claude Code itself accesses the item,
         // so it does not raise a Keychain prompt for Quota Bar.
@@ -133,6 +141,92 @@ actor ClaudeUsageClient {
             expiresAt: expiresAtMillis.map { Date(timeIntervalSince1970: $0 / 1_000) },
             subscriptionType: oauth["subscriptionType"] as? String
         )
+    }
+
+    private func liveProcessCredential() -> Credential? {
+        let pgrep = Process()
+        pgrep.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
+        pgrep.arguments = ["-u", "\(getuid())", "-f", "claude"]
+        let pgrepOutput = Pipe()
+        pgrep.standardOutput = pgrepOutput
+        pgrep.standardError = FileHandle.nullDevice
+        guard (try? pgrep.run()) != nil else { return nil }
+        let pidsData = pgrepOutput.fileHandleForReading.readDataToEndOfFile()
+        pgrep.waitUntilExit()
+        guard pgrep.terminationStatus == 0 else { return nil }
+        let pids = String(decoding: pidsData, as: UTF8.self)
+            .split(whereSeparator: \.isWhitespace)
+            .map(String.init)
+        guard !pids.isEmpty else { return nil }
+
+        let ps = Process()
+        ps.executableURL = URL(fileURLWithPath: "/bin/ps")
+        ps.arguments = ["-E", "-ww", "-p", pids.joined(separator: ",")]
+        let psOutput = Pipe()
+        ps.standardOutput = psOutput
+        ps.standardError = FileHandle.nullDevice
+        guard (try? ps.run()) != nil else { return nil }
+        let psData = psOutput.fileHandleForReading.readDataToEndOfFile()
+        ps.waitUntilExit()
+        guard ps.terminationStatus == 0 else { return nil }
+        let envString = String(decoding: psData, as: UTF8.self)
+
+        guard let tokenRange = envString.range(of: "CLAUDE_CODE_OAUTH_TOKEN=") else { return nil }
+        let after = envString[tokenRange.upperBound...]
+        let token = after.prefix { !$0.isWhitespace && $0 != "\"" && $0 != "'" }
+        guard token.hasPrefix("sk-ant-oat") else { return nil }
+
+        var subType: String?
+        if let subRange = envString.range(of: "CLAUDE_CODE_SUBSCRIPTION_TYPE=") {
+            let subAfter = envString[subRange.upperBound...]
+            let sub = String(subAfter.prefix { !$0.isWhitespace && $0 != "\"" && $0 != "'" })
+            if !sub.isEmpty { subType = sub }
+        }
+
+        return Credential(
+            accessToken: String(token),
+            expiresAt: Date().addingTimeInterval(8 * 3600),
+            subscriptionType: subType
+        )
+    }
+
+    private func syncTokenToKeychain(token: String, subscriptionType: String?) {
+        guard let data = keychainCredentialData(),
+              var object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              var oauth = object["claudeAiOauth"] as? [String: Any]
+        else {
+            return
+        }
+        let currentToken = oauth["accessToken"] as? String
+        let currentExp = LocalCollectors.number(oauth["expiresAt"]) ?? 0
+        let now = Date().timeIntervalSince1970 * 1000
+        // Don't rewrite if identical token and still valid for > 4 hours
+        if currentToken == token && (currentExp - now) > 4 * 3600 * 1000 {
+            return
+        }
+        oauth["accessToken"] = token
+        oauth["expiresAt"] = Int(now + 8 * 3600 * 1000)
+        if let subscriptionType {
+            oauth["subscriptionType"] = subscriptionType
+        }
+        object["claudeAiOauth"] = oauth
+        guard let newData = try? JSONSerialization.data(withJSONObject: object, options: []),
+              let newString = String(data: newData, encoding: .utf8)
+        else {
+            return
+        }
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+        proc.arguments = [
+            "add-generic-password", "-U",
+            "-a", NSUserName(),
+            "-s", "Claude Code-credentials",
+            "-w", newString
+        ]
+        proc.standardOutput = FileHandle.nullDevice
+        proc.standardError = FileHandle.nullDevice
+        try? proc.run()
+        proc.waitUntilExit()
     }
 
     private func keychainCredentialData() -> Data? {

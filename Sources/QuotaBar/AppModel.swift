@@ -223,8 +223,8 @@ final class AppModel: ObservableObject {
                             "\(usage.plan) · subscription quota"
                         )
                     merged[index].source = currentLanguage.text(
-                        "Claude 官方用量接口（Claude Code 登录）",
-                        "Official Claude usage endpoint (Claude Code sign-in)"
+                        "Claude 官方用量接口",
+                        "Official Claude usage endpoint"
                     )
                 }
             } catch {
@@ -569,13 +569,13 @@ final class AppModel: ObservableObject {
             switch clientError {
             case .loggedOut, .rejected:
                 return language.text(
-                    "Claude Code 未登录或登录已失效，请在终端运行 claude 后 /login",
-                    "Claude Code is signed out; run claude in a terminal and /login"
+                    "Claude 未登录或登录已失效，请打开 Claude 桌面端或在终端运行 claude",
+                    "Claude is signed out; open Claude Desktop or run claude in a terminal"
                 )
             case .expired:
                 return language.text(
-                    "Claude Code 登录已过期，在终端打开一次 claude 即可刷新",
-                    "Claude Code sign-in expired; open claude in a terminal once to refresh it"
+                    "Claude 登录已过期，打开 Claude 桌面端或运行 claude 即可自动刷新",
+                    "Claude sign-in expired; open Claude Desktop or run claude to refresh"
                 )
             case .http(let status):
                 return language.text(
